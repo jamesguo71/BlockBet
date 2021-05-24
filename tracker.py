@@ -4,6 +4,7 @@ import sys
 import select
 import struct
 import time
+from signal import signal, SIGINT
 from Crypto.PublicKey import RSA
 
 class Tracker:
@@ -31,6 +32,10 @@ class Tracker:
 		self.last_ping_request = time.time()
 
 		self.conn_port = conn_port
+
+		## This is used to indicate that the ping thread should continue
+		## If a user enters CTRL+C then this will be set to 0
+		self.ping_loop = 1
 
 		self.peerfd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.peerfd.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -85,50 +90,78 @@ class Tracker:
 		## Dict for clients requesting a peer list
 		self.lists = []
 
+	def handler(self, s, f):
+		print('[INFO] Shutting down')
+		self.ping_loop = 0
+
+		self.peer_ping.join()
+
+		self.peerfd.close()
+		self.sigfd.close()
+		self.listfd.close()
+
+		exit(0)
+
 	def perform_ping_check(self):
-		print('[INFO] Doing PING check')
+		while self.ping_loop:
+			time.sleep(1)
 
-		## Keep a list of the dead and remove them after the checks
-		dead = []
+			## Keep a list of the dead and remove them after the checks
+			if time.time() - self.last_ping_request > 20:
+				print('[INFO] Doing PING check')
+				dead = []
 
-		## Loops through each known peer and attempts to confirm its liveness
-		for peer in self.registered:
-			fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				self.last_ping_request = time.time()
 
-			try:
-				fd.connect((peer, self.conn_port))
-			except:
-				## If this is hit then the peer is dead
-				dead.append(peer)
-				fd.close()
-				continue
+				## Loops through each known peer and attempts to confirm its liveness
+				for peer in self.registered:
+					fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-			fd.send(struct.pack('I', 0x00))
+					try:
+						fd.connect((peer, self.conn_port))
+					except:
+						## If this is hit then the peer is dead
+						dead.append(peer)
+						fd.close()
+						continue
 
-			d = fd.recv(4)
+					fd.send(struct.pack('I', 0x00))
 
-			try:
-				value = struct.unpack('I', d)[0]
-			except:
-				print('[ERROR] Invalid number of bytes received')
-				dead.append(peer)
-				fd.close()
-				continue
+					try:
+						d = fd.recv(4)
+					except:
+						dead.append(peer)
+						fd.close()
+						continue
 
-			if value != 0x41414141:
-				print('[ERROR] Invalid PING response from: %s' %peer)
-				dead.append(peer)
+					try:
+						value = struct.unpack('I', d)[0]
+					except:
+						print('[ERROR] Invalid number of bytes received')
+						dead.append(peer)
+						fd.close()
+						continue
 
-			fd.close()
+					if value != 0x41414141:
+						print('[ERROR] Invalid PING response from: %s' %peer)
+						dead.append(peer)
+
+					fd.close()
 
 
-		for peer in dead:
-			print('[INFO] Removing %s as peer' %(peer))
-			self.registered.pop(peer)
+				for peer in dead:
+					print('[INFO] Removing %s as peer' %(peer))
+					self.registered.pop(peer)
 
 		return
 
 	def run(self):
+		## Create a thread to periodically ping peers
+		self.peer_ping = threading.Thread(target = self.perform_ping_check, args = ())
+		self.peer_ping.start()
+
+		## Set up the CTRL+C handler
+		signal(SIGINT, self.handler)
 
 		inputs = [ self.peerfd, self.sigfd, self.listfd ]
 
@@ -149,6 +182,8 @@ class Tracker:
 
 					print('[INFO] Connection from a new sig request: ', client_address )
 
+					print("ADDED sig client: ", clientfd)
+
 					inputs.append(clientfd)
 					self.sigs.append(clientfd)
 				elif r is self.listfd:
@@ -160,10 +195,11 @@ class Tracker:
 
 					if host not in self.registered:
 						try:
-							r.send(b'Rejected')
+							clientfd.send(b'Rejected')
 						except:
 							print('[INFO] Client disconnected early')
-						r.close()
+						clientfd.close()
+						continue
 
 					## Create a list of registered peers
 					## First let the peer know how many to expect
@@ -222,13 +258,10 @@ class Tracker:
 
 							self.registered[host] = {'signature': data}
 
-							print(self.registered)
-
 							r.close()
 							self.peers.remove(r)
 							inputs.remove(r)
 
-							print(self.registered)
 						elif r in self.sigs:
 							## If the requesting peer is not registered then response is Rejected
 							host, port = r.getpeername()
@@ -260,11 +293,8 @@ class Tracker:
 							self.sigs.remove(r)
 						elif r in self.peers:
 							self.peers.remove(r)
-							
-						inputs.remove(r)
 
-			if time.time() - self.last_ping_request > 20:
-				self.perform_ping_check()
+						inputs.remove(r)
 
 p = Tracker()
 

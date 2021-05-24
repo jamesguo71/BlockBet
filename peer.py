@@ -2,6 +2,7 @@ import socket
 import threading
 import sys
 import select
+from signal import signal, SIGINT
 import struct
 import time
 from Crypto.PublicKey import RSA
@@ -61,6 +62,9 @@ class Peer:
 		self.sig_port = sig_port
 		self.list_port = list_port
 		self.conn_port = conn_port
+
+		## While this is 1 the ping thread will continue
+		self.peer_loop = 1
 
 		## Stores the time of the last peer update
 		self.last_peer_check = 0
@@ -183,9 +187,21 @@ class Peer:
 
 		fd.close()
 
+	def handler(self, s, f):
+		print('[INFO] Shutting down')
+		self.peer_loop = 0
+
+		self.peer_update.join()
+
+		self.peerfd.close()
+
+		exit(0)
+
 	def update_peer_list(self):
 
-		while(1):
+		while(self.peer_loop):
+			time.sleep(5)
+
 			if time.time() - self.last_peer_check > 10:
 				print('[INFO] Updating the peer list')
 				## Connect and git a list of peers
@@ -216,10 +232,12 @@ class Peer:
 		return
 
 	def run(self):
+		## Set up the CTRL+C handler
+		signal(SIGINT, self.handler)
 
 		## Create a thread to periodically do a peer list update
-		peer_update = threading.Thread(target = self.update_peer_list, args = ())
-		peer_update.start()
+		self.peer_update = threading.Thread(target = self.update_peer_list, args = ())
+		self.peer_update.start()
 
 		inputs = [ self.peerfd ]
 
