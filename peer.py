@@ -3,9 +3,12 @@ import threading
 import sys
 import select
 from signal import signal, SIGINT
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Signature import pkcs1_15
 import struct
 import time
 from Crypto.PublicKey import RSA
+from Crypto.Hash import SHA256
 
 """ Read from the socket until the value specified by 'u' is received
 	include is used to specify if the trailing 'u' data is to be included or excluded
@@ -140,7 +143,7 @@ class Peer:
 			peer = readuntil(fd, b'\n')
 
 			## This will hold the signatures too
-			self.peers[peer] = []
+			self.peers[peer] = {'sig: None'}
 
 			## TODO: make sure the peer isn't me
 			print('[INFO] Added peer: %s' %(peer))
@@ -165,6 +168,114 @@ class Peer:
 
 		print('[INFO] Peer listening on port: %d' %(list_port))
 
+		## Set up the CTRL+C handler
+		signal(SIGINT, self.handler)
+
+		## Create a thread to periodically do a peer list update
+		self.peer_update = threading.Thread(target = self.update_peer_list, args = ())
+		self.peer_update.start()
+
+	def verify_signature(self, message, signature, key):
+		""" Function to verify the signature of a received message"""
+
+		signer = PKCS1_v1_5.new(key)
+		digest = SHA256.new()
+
+		digest.update(message)
+
+		return signer.verify(digest, signature)
+
+	def get_peer_signature(self, peer):
+		""" Connects to the tracker and requests the signature of
+			the specified peer
+		"""
+		## If we don't know this peer then we don't need to request it
+		if peer not in self.peers:
+			return 1
+
+		fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+		try:
+			fd.connect((self.tracker, self.sig_port))
+		except:
+			print('[ERROR] Failed to connect to tracker signature port: %s:%d' %(self.tracker, self.sig_port))
+			return 1
+
+		fd.send(peer)
+
+		## get the signature length
+		siglen = struct.unpack('I', fd.recv(4))
+
+		signature = fd.recv(siglen)
+
+		fd.close()
+
+		## Check for the failure case
+		if siglen == 'Unknown':
+			return 1
+
+		## Import the key to ensure that it is valid
+		try:
+			rsa_pubkey = RSA.importKey(signature)
+		except:
+			print('[ERROR] Invalid public key')
+			return 1
+
+		self.peers[peer]['signature'] = signature
+
+		return 0
+
+	def handle_new_block(self, fd):
+		"""
+			The format for a block is:
+			4 byte header = 0xdeadbeef (already read from the socket)
+			2 byte length of the data
+			2 byte length of the signature
+			data[data_length]
+			signature[sig_length]
+		"""
+		client = fd.getpeername()
+
+		print('[INFO] Received a new block from: %s' %client)
+
+		## read a 2-byte size field for the data length and 2-byte size field for signature length
+		data_len = struct.unpack('H', fd.recv(2))[0]
+		sig_len = struct.unpack('H', fd.recv(2))[0]
+
+		data = fd.recv(data_len)
+		sig = fd.recv(sig_len)
+
+		## Do I have the signature for this peer?
+		print(self.peers)
+
+		if self.get_peer_signature(client):
+			print('[ERROR] Failed to get a signature for the peer: %s' %client)
+			return
+
+		print(self.verify_signature(data, sig, self.peers[client]))
+
+		return
+
+	def send_signed_data(self, data):
+		""" This sends data to every peer in the list """
+
+		### Use my private key to sign the data
+		print('SENDING IN THE DA')
+		key = RSA.importKey(self.privkey)
+
+		signer = PKCS1_v1_5.new(self.privkey)
+
+		digest = SHA256.new()
+
+		digest.update(data)
+
+		sig = pkcs1_15.new(key).sign(digest)
+
+		print(type(sig))
+		print(sig)
+
+		return
+
 	def handle_client(self, fd):
 
 		## If the first byte is a 0 then this is a PING request as a keep alive check
@@ -182,6 +293,8 @@ class Peer:
 		if value == 0:
 			print('[INFO] Received a ping.')
 			fd.send(struct.pack('I', 0x41414141))
+		elif value == 0xdeadbeef:
+			self.handle_new_block(fd)
 		else:
 			print('Unhandled option')
 
@@ -220,7 +333,7 @@ class Peer:
 
 					## This will hold the signatures too
 					if peer not in self.peers:
-						self.peers[peer] = []
+						self.peers[peer] = {'sig': None}
 
 						## TODO: make sure the peer isn't me
 						print('[INFO] Added peer: %s' %(peer))
@@ -232,13 +345,6 @@ class Peer:
 		return
 
 	def run(self):
-		## Set up the CTRL+C handler
-		signal(SIGINT, self.handler)
-
-		## Create a thread to periodically do a peer list update
-		self.peer_update = threading.Thread(target = self.update_peer_list, args = ())
-		self.peer_update.start()
-
 		inputs = [ self.peerfd ]
 
 		while inputs:
@@ -261,4 +367,12 @@ class Peer:
 
 p = Peer('localhost')
 
-p.run()
+print("THreading...")
+pa = threading.Thread(target = p.run(), args = ())
+pa.start()
+
+while 1:
+	print('SENDIN THE DAA')
+	p.send_signed_data(b"HELO WORLD")
+
+	input('...')
