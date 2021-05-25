@@ -143,7 +143,7 @@ class Peer:
 			peer = readuntil(fd, b'\n')
 
 			## This will hold the signatures too
-			self.peers[peer] = {'sig: None'}
+			self.peers[peer] = {'sig': None}
 
 			## TODO: make sure the peer isn't me
 			print('[INFO] Added peer: %s' %(peer))
@@ -204,7 +204,7 @@ class Peer:
 		fd.send(peer)
 
 		## get the signature length
-		siglen = struct.unpack('I', fd.recv(4))
+		siglen, = struct.unpack('I', fd.recv(4))
 
 		signature = fd.recv(siglen)
 
@@ -262,8 +262,6 @@ class Peer:
 		### Use my private key to sign the data
 		print('SENDING IN THE DA')
 		key = RSA.importKey(self.privkey)
-
-		signer = PKCS1_v1_5.new(self.privkey)
 
 		digest = SHA256.new()
 
@@ -368,7 +366,7 @@ class Peer:
 p = Peer('localhost')
 
 print("THreading...")
-pa = threading.Thread(target = p.run(), args = ())
+pa = threading.Thread(target = p.run, args = ())
 pa.start()
 
 while 1:
