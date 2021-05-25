@@ -108,7 +108,6 @@ class Tracker:
 
 			## Keep a list of the dead and remove them after the checks
 			if time.time() - self.last_ping_request > 20:
-				print('[INFO] Doing PING check')
 				dead = []
 
 				self.last_ping_request = time.time()

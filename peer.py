@@ -4,7 +4,6 @@ import sys
 import select
 from signal import signal, SIGINT
 from Crypto.Signature import PKCS1_v1_5
-from Crypto.Signature import pkcs1_15
 import struct
 import time
 from Crypto.PublicKey import RSA
@@ -66,6 +65,9 @@ class Peer:
 		self.list_port = list_port
 		self.conn_port = conn_port
 
+		## Queue used to store validated messages from other peers
+		self.message_queue = []
+
 		## While this is 1 the ping thread will continue
 		self.peer_loop = 1
 
@@ -94,7 +96,7 @@ class Peer:
 		self.privkey = f.read()
 		f.close()
 
-		## Verivy that the public and private key are valid
+		## Verify that the public and private key are valid
 		try:
 			self.rsa_pubkey = RSA.importKey(self.pubkey)
 		except:
@@ -143,7 +145,7 @@ class Peer:
 			peer = readuntil(fd, b'\n')
 
 			## This will hold the signatures too
-			self.peers[peer] = {'sig: None'}
+			self.peers[peer] = {'sig': None}
 
 			## TODO: make sure the peer isn't me
 			print('[INFO] Added peer: %s' %(peer))
@@ -191,6 +193,8 @@ class Peer:
 		"""
 		## If we don't know this peer then we don't need to request it
 		if peer not in self.peers:
+			print("peernot in", peer)
+			print(self.peers)
 			return 1
 
 		fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -204,7 +208,7 @@ class Peer:
 		fd.send(peer)
 
 		## get the signature length
-		siglen = struct.unpack('I', fd.recv(4))
+		siglen = struct.unpack('I', fd.recv(4))[0]
 
 		signature = fd.recv(siglen)
 
@@ -221,7 +225,8 @@ class Peer:
 			print('[ERROR] Invalid public key')
 			return 1
 
-		self.peers[peer]['signature'] = signature
+		print(type(self.peers[peer]))
+		self.peers[peer]['sig'] = signature
 
 		return 0
 
@@ -236,7 +241,7 @@ class Peer:
 		"""
 		client = fd.getpeername()
 
-		print('[INFO] Received a new block from: %s' %client)
+		print('[INFO] Received a new block from: ', client)
 
 		## read a 2-byte size field for the data length and 2-byte size field for signature length
 		data_len = struct.unpack('H', fd.recv(2))[0]
@@ -248,7 +253,7 @@ class Peer:
 		## Do I have the signature for this peer?
 		print(self.peers)
 
-		if self.get_peer_signature(client):
+		if self.get_peer_signature(client[0].encode('utf-8')):
 			print('[ERROR] Failed to get a signature for the peer: %s' %client)
 			return
 
@@ -260,46 +265,90 @@ class Peer:
 		""" This sends data to every peer in the list """
 
 		### Use my private key to sign the data
-		print('SENDING IN THE DA')
 		key = RSA.importKey(self.privkey)
 
-		signer = PKCS1_v1_5.new(self.privkey)
-
 		digest = SHA256.new()
-
 		digest.update(data)
 
-		sig = pkcs1_15.new(key).sign(digest)
+		sig = PKCS1_v1_5.new(key).sign(digest)
 
-		print(type(sig))
 		print(sig)
+
+		block = struct.pack('H', len(data))
+		block += struct.pack('H', len(sig))
+		block += data
+		block += sig
+
+		for p in self.peers:
+			fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+			try:
+				fd.connect((p, self.conn_port))
+			except:
+				print('[ERROR] Failed to connect to %s:%d' %(p, self.conn_port))
+				continue
+
+			print("Sent to client:", p)
+			fd.sendall(block)
+
+			fd.close()
 
 		return
 
+	def get_new_message(self):
+		if len(self.message_queue) == 0:
+			return None
+
+		return self.message_queue.pop(0)
+
 	def handle_client(self, fd):
-
-		## If the first byte is a 0 then this is a PING request as a keep alive check
-		## Return with 0x41414141
-		data = fd.recv(4)
-
+		## If the size fields are 0 then this is a ping
+		## read a 2-byte size field for the data length and 2-byte size field for signature length
 		try:
-			value = struct.unpack('I', data)[0]
+			data_len = struct.unpack('H', fd.recv(2))[0]
+			sig_len = struct.unpack('H', fd.recv(2))[0]
 		except:
-			print('[ERROR] Failed to receive data:' %(data))
+			print('[ERROR] Failed to receive data')
 			fd.close()
+
 			return
 
-
-		if value == 0:
+		if data_len == 0:
 			print('[INFO] Received a ping.')
 			fd.send(struct.pack('I', 0x41414141))
-		elif value == 0xdeadbeef:
-			self.handle_new_block(fd)
-		else:
-			print('Unhandled option')
+			fd.close()
+
+			return
+
+		## Read the data and signature
+		try:
+			data = fd.recv(data_len)
+			sig = fd.recv(sig_len)
+		except:
+			print('[ERROR] Failed to receive client data')
+			fd.close()
+
+			return
+
+		client = fd.getpeername()
 
 		fd.close()
 
+		print('[INFO] Received a new block from: ', client)
+
+		## Do I have the signature for this peer?
+		print(self.peers)
+
+		if self.get_peer_signature(client[0].encode('utf-8')):
+			print('[ERROR] Failed to get a signature for the peer: ', client)
+			return
+
+		print('[INFO] Signature verified on new message')
+
+		self.message_queue.append( (data, sig) )
+
+		return;
+		
 	def handler(self, s, f):
 		print('[INFO] Shutting down')
 		self.peer_loop = 0
@@ -365,14 +414,14 @@ class Peer:
 					inputs.remove(r)
 
 
-p = Peer('localhost')
+p = Peer(sys.argv[1])
 
 print("THreading...")
-pa = threading.Thread(target = p.run(), args = ())
+pa = threading.Thread(target = p.run, args = ())
 pa.start()
 
 while 1:
-	print('SENDIN THE DAA')
-	p.send_signed_data(b"HELO WORLD")
-
-	input('...')
+    line = input('..> ')
+    print(type(line))
+    p.send_signed_data(line.encode('utf-8'))
+    print(p.get_new_message())
