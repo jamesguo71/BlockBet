@@ -208,7 +208,11 @@ class Peer:
 		fd.send(peer)
 
 		## get the signature length
+<<<<<<< HEAD
 		siglen = struct.unpack('I', fd.recv(4))[0]
+=======
+		siglen, = struct.unpack('I', fd.recv(4))
+>>>>>>> 2da38b63beca459bcb615c249a1e9a6125d70671
 
 		signature = fd.recv(siglen)
 
