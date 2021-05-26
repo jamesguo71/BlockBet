@@ -193,8 +193,6 @@ class Peer:
 		"""
 		## If we don't know this peer then we don't need to request it
 		if peer not in self.peers:
-			print("peernot in", peer)
-			print(self.peers)
 			return 1
 
 		fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -208,11 +206,7 @@ class Peer:
 		fd.send(peer)
 
 		## get the signature length
-<<<<<<< HEAD
 		siglen = struct.unpack('I', fd.recv(4))[0]
-=======
-		siglen, = struct.unpack('I', fd.recv(4))
->>>>>>> 2da38b63beca459bcb615c249a1e9a6125d70671
 
 		signature = fd.recv(siglen)
 
@@ -229,7 +223,6 @@ class Peer:
 			print('[ERROR] Invalid public key')
 			return 1
 
-		print(type(self.peers[peer]))
 		self.peers[peer]['sig'] = signature
 
 		return 0
@@ -255,13 +248,9 @@ class Peer:
 		sig = fd.recv(sig_len)
 
 		## Do I have the signature for this peer?
-		print(self.peers)
-
 		if self.get_peer_signature(client[0].encode('utf-8')):
 			print('[ERROR] Failed to get a signature for the peer: %s' %client)
 			return
-
-		print(self.verify_signature(data, sig, self.peers[client]))
 
 		return
 
@@ -275,8 +264,6 @@ class Peer:
 		digest.update(data)
 
 		sig = PKCS1_v1_5.new(key).sign(digest)
-
-		print(sig)
 
 		block = struct.pack('H', len(data))
 		block += struct.pack('H', len(sig))
@@ -341,8 +328,6 @@ class Peer:
 		print('[INFO] Received a new block from: ', client)
 
 		## Do I have the signature for this peer?
-		print(self.peers)
-
 		if self.get_peer_signature(client[0].encode('utf-8')):
 			print('[ERROR] Failed to get a signature for the peer: ', client)
 			return
@@ -426,6 +411,5 @@ pa.start()
 
 while 1:
     line = input('..> ')
-    print(type(line))
     p.send_signed_data(line.encode('utf-8'))
     print(p.get_new_message())
