@@ -44,12 +44,17 @@ class Blockchain:
         temp_blockchain = []
         prev_hash = GENESIS_HASH
         start = struct.calcsize("I") # message type
+        hdr_size = struct.calcsize(block_header_fmt)
         while start < len(data):
-            nbytes, block = self._receive_block(prev_hash, data[start:])
-            print("Received IBD block of", nbytes, "bytes")
-            start += nbytes
-            prev_hash = block.prev_hash
-            temp_blockchain.append(block)
+            if not self.verify_header(prev_hash, data[:hdr_size]):
+                print("Header verification failed")
+                break
+            else:
+                nbytes, block = self._receive_block(prev_hash, data[start:])
+                print("Received IBD block of", nbytes, "bytes")
+                start += nbytes
+                prev_hash = block.prev_hash
+                temp_blockchain.append(block)
         if len(self.blockchain) == 0 or len(temp_blockchain) > len(self.blockchain):
             print("Finished IBM from", src)
             self.blockchain = temp_blockchain
@@ -71,17 +76,13 @@ class Blockchain:
     def _receive_block(self, prev_hash, data):
         hdr_size = struct.calcsize(block_header_fmt)
         nbytes = hdr_size
-        if not self.verify_header(prev_hash, data[hdr_size]):
-            print("Header verification failed")
-            return False
-        else:
-            prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
-            bets = []
-            for _ in range(bet_num):
-                bet = struct.unpack_from(bet_fmt, data[hdr_size:])
-                bets.append(bet)
-                nbytes += struct.calcsize(bet_fmt)
-            return nbytes, Block(prev_hash, timestamp, nonce, bet_num, bets)
+        prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
+        bets = []
+        for _ in range(bet_num):
+            bet = struct.unpack_from(bet_fmt, data[hdr_size:])
+            bets.append(bet)
+            nbytes += struct.calcsize(bet_fmt)
+        return nbytes, Block(prev_hash, timestamp, nonce, bet_num, bets)
 
     def push_my_blockchain(self, data, src):
         response = struct.pack("I", MessageType.IBD_RESPONSE)
