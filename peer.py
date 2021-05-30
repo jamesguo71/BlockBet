@@ -77,6 +77,12 @@ class Peer:
 		## Stores the known peers and their associated keys if available
 		self.peers = {}
 
+		## Todo: host_name temporarily set as localhost
+		self.host_name = socket.gethostbyname(socket.gethostname()).encode("ascii")
+
+		## Store registered handlers for handling different types of msgs
+		self.msg_handlers = {}
+
 		## Open and read the public and private keys
 		try:
 			f = open(pubkey, 'rb')
@@ -144,10 +150,14 @@ class Peer:
 		for e in range(int(entry_count)):
 			peer = readuntil(fd, b'\n')
 
+			## make sure the peer isn't me
+			print(peer, self.host_name)
+			if peer == self.host_name:
+				continue
+
 			## This will hold the signatures too
 			self.peers[peer] = {'sig': None}
 
-			## TODO: make sure the peer isn't me
 			print('[INFO] Added peer: %s' %(peer))
 
 		fd.close()
@@ -254,7 +264,7 @@ class Peer:
 
 		return
 
-	def send_signed_data(self, data):
+	def send_signed_data(self, data, target=None):
 		""" This sends data to every peer in the list """
 
 		### Use my private key to sign the data
@@ -270,16 +280,21 @@ class Peer:
 		block += data
 		block += sig
 
-		for p in self.peers:
+		if target is None:
+			targets = self.peers
+		else:
+			targets = [ target ]
+
+		for p in targets:
 			fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 			try:
 				fd.connect((p, self.conn_port))
 			except:
-				print('[ERROR] Failed to connect to %s:%d' %(p, self.conn_port))
+				print('[send_signed_data ERROR] Failed to connect to %s:%d' %(p, self.conn_port))
 				continue
 
-			print("Sent to client:", p)
+			print("Data sent to peer:", p)
 			fd.sendall(block)
 
 			fd.close()
@@ -336,8 +351,14 @@ class Peer:
 
 		self.message_queue.append( (data, sig) )
 
+		msg_type, = struct.unpack_from("I", data)
+		self.msg_handlers[msg_type](data, client)
+
 		return;
-		
+
+	def register_msg_handler(self, msg_type, handler):
+		self.msg_handlers[msg_type] = handler
+
 	def handler(self, s, f):
 		print('[INFO] Shutting down')
 		self.peer_loop = 0
@@ -370,7 +391,7 @@ class Peer:
 					peer = readuntil(fd, b'\n')
 
 					## This will hold the signatures too
-					if peer not in self.peers:
+					if peer not in self.peers and peer != self.host_name:
 						self.peers[peer] = {'sig': None}
 
 						## TODO: make sure the peer isn't me
@@ -393,7 +414,7 @@ class Peer:
 					clientfd, client_address = self.peerfd.accept()
 
 					## The server has a new connection waiting
-					print('[INFO] Connection from a new peer: ', client_address )
+					print('[INFO] Connection from Tracker / a new peer: ', client_address )
 					inputs.append(clientfd)
 				else:
 					self.handle_client(r)
@@ -403,13 +424,14 @@ class Peer:
 					inputs.remove(r)
 
 
-p = Peer(sys.argv[1])
+if __name__ == "__main__":
+	p = Peer(sys.argv[1])
 
-print("THreading...")
-pa = threading.Thread(target = p.run, args = ())
-pa.start()
+	print("THreading...")
+	pa = threading.Thread(target = p.run, args = ())
+	pa.start()
 
-while 1:
-    line = input('..> ')
-    p.send_signed_data(line.encode('utf-8'))
-    print(p.get_new_message())
+	while 1:
+		line = input('..> ')
+		p.send_signed_data(line.encode('utf-8'))
+		print(p.get_new_message())
