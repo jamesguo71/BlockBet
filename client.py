@@ -1,5 +1,6 @@
 import sys
 import threading
+import time
 
 from blockchain import Blockchain
 from message import MessageType
@@ -12,6 +13,7 @@ print("Threading Peer...")
 pa = threading.Thread(target=peer.run, args=())
 pa.start()
 
+time.sleep(3)
 chain = Blockchain(peer)
 chain.initial_blockchain_download()
 peer.register_msg_handler(MessageType.IBD_REQUEST, chain.push_my_blockchain)

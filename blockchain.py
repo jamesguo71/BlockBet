@@ -38,6 +38,7 @@ class Blockchain:
             req = struct.pack('I', MessageType.IBD_REQUEST)
             self.peer.register_msg_handler(MessageType.IBD_RESPONSE, self.ibd_response_handler)
             self.peer.send_signed_data(req)
+            print("[INFO] IBD Request sent")
 
     def ibd_response_handler(self, data, src):
         temp_blockchain = []
@@ -99,8 +100,12 @@ class Blockchain:
     def receive_new_block(self, data, src):
         start = struct.calcsize("I") # message type
         data = data[start:] # skip message type
+
         hdr_size = struct.calcsize(block_header_fmt)
-        prev_hash = self.blockchain[-1].prev_hash
+        if len(self.blockchain) > 0:
+            prev_hash = self.calc_prev_hash(self.blockchain[-1])
+        else:
+            prev_hash = GENESIS_HASH
         if not self.verify_header(prev_hash, data[hdr_size]):
             print("Header verification failed")
             return False
