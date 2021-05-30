@@ -6,7 +6,7 @@ from message import MessageType
 from peer import Peer
 
 
-peer = Peer("localhost", conn_port=int(sys.argv[1]))
+peer = Peer(sys.argv[1])
 
 print("Threading Peer...")
 pa = threading.Thread(target=peer.run, args=())
