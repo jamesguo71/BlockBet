@@ -71,7 +71,7 @@ class Blockchain:
     def _receive_block(self, prev_hash, data):
         hdr_size = struct.calcsize(block_header_fmt)
         nbytes = hdr_size
-        if not self.verify_header(prev_hash, data[hdr_size]):
+        if not self.verify_header(prev_hash, data[:hdr_size]):
             print("Header verification failed")
             return False
         else:

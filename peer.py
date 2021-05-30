@@ -283,7 +283,7 @@ class Peer:
 			targets = self.peers
 		else:
 			targets = [ target ]
-
+		print("Targets", targets)
 		for p in targets:
 			fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -351,7 +351,7 @@ class Peer:
 		self.message_queue.append( (data, sig) )
 
 		msg_type, = struct.unpack_from("I", data)
-		self.msg_handlers[msg_type](data, client)
+		self.msg_handlers[msg_type](data, client[0])
 
 		return;
 
