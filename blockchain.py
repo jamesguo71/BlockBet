@@ -106,7 +106,7 @@ class Blockchain:
             prev_hash = self.calc_prev_hash(self.blockchain[-1])
         else:
             prev_hash = GENESIS_HASH
-        if not self.verify_header(prev_hash, data[hdr_size]):
+        if not self.verify_header(prev_hash, data[:hdr_size]):
             print("Header verification failed")
             return False
         else:

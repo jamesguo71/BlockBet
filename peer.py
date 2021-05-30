@@ -151,7 +151,6 @@ class Peer:
 			peer = readuntil(fd, b'\n')
 
 			## make sure the peer isn't me
-			print(peer, self.host_name)
 			if peer == self.host_name:
 				continue
 
