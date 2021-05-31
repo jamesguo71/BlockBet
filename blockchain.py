@@ -79,7 +79,7 @@ class Blockchain:
         prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
         bets = []
         for _ in range(bet_num):
-            bet = struct.unpack_from(bet_fmt, data[hdr_size:])
+            bet, = struct.unpack_from(bet_fmt, data[hdr_size:])
             bets.append(bet)
             nbytes += struct.calcsize(bet_fmt)
         return nbytes, Block(prev_hash, timestamp, nonce, bet_num, bets)
@@ -115,7 +115,7 @@ class Blockchain:
             prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
             bets = []
             for _ in range(bet_num):
-                bet = struct.unpack_from(bet_fmt, data[hdr_size:])
+                bet, = struct.unpack_from(bet_fmt, data[hdr_size:])
                 bets.append(bet)
             self.blockchain.append(Block(prev_hash, timestamp, nonce, bet_num, bets))
             print("Received a new block")
@@ -158,7 +158,7 @@ class Blockchain:
         print("prev_hash", prev_hash)
         print("block_header", block_header)
         print("unpacked", struct.unpack_from("<32s", block_header) )
-        if struct.unpack_from("<32s", block_header) != prev_hash:
+        if struct.unpack_from("<32s", block_header)[0] != prev_hash:
             return False
         print("hash ok, then nonce")
         return self.verify_nonce(block_header)
