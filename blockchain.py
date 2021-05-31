@@ -92,7 +92,7 @@ class Blockchain:
         return n_bytes, Block(prev_hash, timestamp, nonce, bet_num, bets)
 
     def push_my_blockchain(self, data, src):
-        assert struct.unpack_from("I", data) == MessageType.IBD_REQUEST
+        # assert struct.unpack_from("I", data) == MessageType.IBD_REQUEST
         response = struct.pack("I", MessageType.IBD_RESPONSE)
         for block in self.blockchain:
             response += self.add_block_bytes(block)
@@ -141,7 +141,8 @@ class Blockchain:
         nonce = 0
         while not self.stop_mining:
             nonce += 1
-            self.print_mining_progress(nonce)
+            print("[INFO] Current block height: %s, " % len(self.blockchain)
+                  + "mining progress: %s\r" % nonce, end="")
             header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
             if self.verify_nonce(header):
                 print("[INFO] mining succeeded.")
@@ -181,11 +182,4 @@ class Blockchain:
         if bin_str[:ZEROS] == '0' * ZEROS:
             return True
         return False
-
-    def print_mining_progress(self, nonce):
-        print("[INFO] Current block height: %s, " % len(self.blockchain)
-              + "mining progress: %s\r" % nonce, end="")
-        print([block.nonce for block in self.blockchain])
-        print('\033[F\033[F\033[K', end='')  # Up, Up, Clear line
-
 

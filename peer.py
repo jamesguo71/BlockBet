@@ -283,7 +283,7 @@ class Peer:
 			targets = self.peers
 		else:
 			targets = [ target ]
-		print("[INFO] Targets", targets)
+
 		for p in targets:
 			fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
