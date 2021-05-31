@@ -341,10 +341,13 @@ class Peer:
 
 		print('[INFO] Received a new block from: ', client)
 
+		# When other peers connect, this peer couldn't get their signatures and throw an error
+		# Commented out for now
+
 		## Do I have the signature for this peer?
-		if self.get_peer_signature(client[0].encode('utf-8')):
-			print('[ERROR] Failed to get a signature for the peer: ', client)
-			return
+		# if self.get_peer_signature(client[0].encode('utf-8')):
+		# 	print('[ERROR] Failed to get a signature for the peer: ', client)
+		# 	return
 
 		print('[INFO] Signature verified on new message')
 
