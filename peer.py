@@ -77,7 +77,7 @@ class Peer:
 		## Stores the known peers and their associated keys if available
 		self.peers = {}
 
-		## Todo: host_name temporarily set as localhost
+		## get the current node's host_name so to ignore self in peer list
 		self.host_name = socket.gethostbyname(socket.gethostname()).encode("ascii")
 
 		## Store registered handlers for handling different types of msgs
