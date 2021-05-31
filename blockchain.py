@@ -155,8 +155,12 @@ class Blockchain:
         self.peer.send_signed_data(request)
 
     def verify_header(self, prev_hash, block_header):
+        print("prev_hash", prev_hash)
+        print("block_header", blockheader)
+        print("unpacked", struct.unpack_from("<32s", block_header) )
         if struct.unpack_from("<32s", block_header) != prev_hash:
             return False
+        print("hash ok, then nonce")
         return self.verify_nonce(block_header)
 
     def verify_nonce(self, block_header):

@@ -351,6 +351,7 @@ class Peer:
 		self.message_queue.append( (data, sig) )
 
 		msg_type, = struct.unpack_from("I", data)
+		print("Received new Message of type:", msg_type)
 		self.msg_handlers[msg_type](data, client[0])
 
 		return;

@@ -281,9 +281,11 @@ class Tracker:
 							if data not in self.registered:
 								r.send(struct.pack('I', 7))
 								r.send(b'Unknown')
+								print("Unknown sent.")
 							else:
 								r.send(struct.pack('I', len(self.registered[data]['signature'])))
 								r.send(self.registered[data]['signature'])
+								print("Signature sent")
 
 							r.close()
 							self.sigs.remove(r)
