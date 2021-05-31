@@ -143,7 +143,7 @@ class Blockchain:
         timestamp = int(time.time())
         bet_num = 4
         while not self.stop_mining:
-            nonce = random.randint(1, 10**10) # to increase the chance of a blockchain fork
+            nonce = random.randint(1, 10**9) # to increase the chance of a blockchain fork
             header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
             if self.verify_nonce(header):
                 # Todo: Add Bets
