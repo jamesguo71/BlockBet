@@ -141,8 +141,7 @@ class Blockchain:
         nonce = 0
         while not self.stop_mining:
             nonce += 1
-            print("\r[INFO] Current block height: %s, " % len(self.blockchain)
-                  + "mining progress: %s" % nonce, end="")
+            self.print_mining_progress(nonce)
             header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
             if self.verify_nonce(header):
                 print("[INFO] mining succeeded.")
@@ -182,3 +181,8 @@ class Blockchain:
         if bin_str[:ZEROS] == '0' * ZEROS:
             return True
         return False
+
+    def print_mining_progress(self, nonce):
+        print("[INFO] Current block height: %s, " % len(self.blockchain)
+              + "mining progress: %s\r" % nonce, end="")
+
