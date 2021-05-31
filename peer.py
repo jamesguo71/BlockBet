@@ -283,17 +283,17 @@ class Peer:
 			targets = self.peers
 		else:
 			targets = [ target ]
-		print("Targets", targets)
+		print("[INFO] Targets", targets)
 		for p in targets:
 			fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 			try:
 				fd.connect((p, self.conn_port))
 			except:
-				print('[send_signed_data ERROR] Failed to connect to %s:%d' %(p, self.conn_port))
+				print('[ERROR] Failed to connect to %s:%d' %(p, self.conn_port))
 				continue
 
-			print("Data sent to peer:", p)
+			print("[INFO] Data sent to peer:", p)
 			fd.sendall(block)
 
 			fd.close()
@@ -354,7 +354,7 @@ class Peer:
 		self.message_queue.append( (data, sig) )
 
 		msg_type, = struct.unpack_from("I", data)
-		print("Received new Message of type:", msg_type)
+		print("[INFO] Received new Message of type:", msg_type)
 		self.msg_handlers[msg_type](data, client[0])
 
 		return;
