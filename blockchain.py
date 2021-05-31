@@ -9,7 +9,7 @@ from peer import Peer
 from message import MessageType, block_header_fmt, bet_fmt
 ZEROS = 19 # About 20 seconds of mining on average for this difficulty level
 
-GENESIS_HASH = bytes("0b" + 256 * '0', "ascii")
+GENESIS_HASH = hashlib.sha256(bytes("0b" + 256 * '0', "ascii")).digest()
 
 class Block:
 
