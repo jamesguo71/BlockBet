@@ -156,7 +156,7 @@ class Blockchain:
 
     def verify_header(self, prev_hash, block_header):
         print("prev_hash", prev_hash)
-        print("block_header", blockheader)
+        print("block_header", block_header)
         print("unpacked", struct.unpack_from("<32s", block_header) )
         if struct.unpack_from("<32s", block_header) != prev_hash:
             return False
