@@ -7,7 +7,7 @@ from typing import List
 
 from peer import Peer
 from message import MessageType, block_header_fmt, bet_fmt
-ZEROS = 19 # About 20 seconds of mining on average for this difficulty level
+ZEROS = 18 # About 20 seconds of mining on average for this difficulty level
 
 GENESIS_HASH = hashlib.sha256(bytes("0b" + 256 * '0', "ascii")).digest()
 
@@ -109,7 +109,7 @@ class Blockchain:
         else:
             prev_hash = GENESIS_HASH
         if not self.verify_header(prev_hash, data[:hdr_size]):
-            print("receive_bnew_block: Header verification failed")
+            print("receive_new_block: Header verification failed")
             return False
         else:
             prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
