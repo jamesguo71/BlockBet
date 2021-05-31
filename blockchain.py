@@ -53,7 +53,7 @@ class Blockchain:
                 nbytes, block = self._receive_block(prev_hash, data[start:])
                 print("Received IBD block of", nbytes, "bytes")
                 start += nbytes
-                prev_hash = block.prev_hash
+                prev_hash = self.calc_prev_hash(block)
                 temp_blockchain.append(block)
         if len(self.blockchain) == 0 or len(temp_blockchain) > len(self.blockchain):
             print("Finished IBM from", src)
@@ -109,7 +109,7 @@ class Blockchain:
         else:
             prev_hash = GENESIS_HASH
         if not self.verify_header(prev_hash, data[:hdr_size]):
-            print("receive_bnew_block: Header verification failed")
+            print("receive_new_block: Header verification failed")
             return False
         else:
             prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)

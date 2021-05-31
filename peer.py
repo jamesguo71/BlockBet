@@ -180,7 +180,7 @@ class Peer:
 		print('[INFO] Peer listening on port: %d' %(list_port))
 
 		## Set up the CTRL+C handler
-		signal(SIGINT, self.handler)
+		# signal(SIGINT, self.handler)
 
 		## Create a thread to periodically do a peer list update
 		self.peer_update = threading.Thread(target = self.update_peer_list, args = ())
