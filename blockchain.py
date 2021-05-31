@@ -183,7 +183,8 @@ class Blockchain:
         return False
 
     def print_mining_progess(self, nonce):
-        print("[INFO] Blockchain height: %s, " % len(self.blockchain)
+        print("\033[K"
+              + "[INFO] Blockchain height: %s, " % len(self.blockchain)
               + "nonce: %s, " % nonce
               + "top: %s"
               % ", ".join([str(block.nonce) for block in self.blockchain[-1:]])
