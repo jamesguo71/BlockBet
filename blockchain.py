@@ -144,7 +144,8 @@ class Blockchain:
             self.print_mining_progess(nonce)
             header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
             if self.verify_nonce(header):
-                print("[INFO] mining succeeded.")
+                print("[INFO] Mining succeeded.")
+                print("[INFO] Nonces of last 3 blocks:", [str(block.nonce) for block in self.blockchain[-3:]])
                 # Todo: Add Bets
                 bets = [b"this is a sample bet", b"another one", b"guess", b"what"]
                 new_block = Block(prev_hash, timestamp, nonce, bet_num, bets)
@@ -183,11 +184,8 @@ class Blockchain:
         return False
 
     def print_mining_progess(self, nonce):
-        print("\033[K"
-              + "[INFO] Blockchain height: %s, " % len(self.blockchain)
-              + "nonce: %s, " % nonce
-              + "top: %s"
-              % ", ".join([str(block.nonce) for block in self.blockchain[-1:]])
-              + "\r", end="")
+        print("\r[INFO] Chain Height: %s, " % len(self.blockchain)
+              + "try nonce %s" % nonce,
+              end="")
 
 
