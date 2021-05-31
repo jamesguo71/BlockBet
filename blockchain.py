@@ -1,5 +1,6 @@
 import binascii
 import hashlib
+import logging
 import struct
 import threading
 import time
@@ -38,7 +39,7 @@ class Blockchain:
             req = struct.pack('I', MessageType.IBD_REQUEST)
             self.peer.register_msg_handler(MessageType.IBD_RESPONSE, self.ibd_response_handler)
             self.peer.send_signed_data(req)
-            print("[INFO] IBD Request sent")
+            print("[IBD] IBD Request sent")
 
     def ibd_response_handler(self, data, src):
         temp_blockchain = []
@@ -47,16 +48,16 @@ class Blockchain:
         hdr_size = struct.calcsize(block_header_fmt)
         while start < len(data):
             if not self.verify_header(prev_hash, data[start:start+hdr_size]):
-                print("ibd: Header verification failed")
+                print("[IBD] ibd: Header verification failed")
                 break
             else:
                 nbytes, block = self._receive_block(prev_hash, data[start:])
-                print("Received IBD block of", nbytes, "bytes")
+                print("[IBD] Received IBD block of", nbytes, "bytes")
                 start += nbytes
                 prev_hash = self.calc_prev_hash(block)
                 temp_blockchain.append(block)
         if len(self.blockchain) == 0 or len(temp_blockchain) > len(self.blockchain):
-            print("Finished IBM from", src)
+            print("[IBD] Finished IBM from", src)
             self.blockchain = temp_blockchain
             self.restart_mining()
 
@@ -88,7 +89,7 @@ class Blockchain:
         response = struct.pack("I", MessageType.IBD_RESPONSE)
         for block in self.blockchain:
             response += self.add_block_bytes(block)
-        print("Sending whole blockchain to target", src)
+        print("[IBD] Sending whole blockchain to target", src)
         self.peer.send_signed_data(response, src)
 
 
@@ -109,7 +110,7 @@ class Blockchain:
         else:
             prev_hash = GENESIS_HASH
         if not self.verify_header(prev_hash, data[:hdr_size]):
-            print("receive_new_block: Header verification failed")
+            print("[INFO] receive_new_block: Header verification failed")
             return False
         else:
             prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
@@ -118,7 +119,7 @@ class Blockchain:
                 bet, = struct.unpack_from(bet_fmt, data[hdr_size:])
                 bets.append(bet)
             self.blockchain.append(Block(prev_hash, timestamp, nonce, bet_num, bets))
-            print("Received a new block")
+            print("[SUCCESS] Received a new valid block from network")
             self.restart_mining()
 
     def mining(self):
@@ -135,7 +136,7 @@ class Blockchain:
             print("\r[INFO] mining progress: %s" % nonce, end = "")
             header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
             if self.verify_nonce(header):
-                print("mining succeeds.")
+                print("[INFO] mining succeeded.")
                 # Todo: Add Bets
                 bets = ["this is a sample bet", "another one", "guess", "what"]
                 new_block = Block(prev_hash, timestamp, nonce, bet_num, bets)
@@ -155,12 +156,12 @@ class Blockchain:
         self.peer.send_signed_data(request)
 
     def verify_header(self, prev_hash, block_header):
-        print("prev_hash", prev_hash)
-        print("block_header", block_header)
-        print("unpacked", struct.unpack_from("<32s", block_header) )
+        logging.debug("prev_hash", prev_hash)
+        logging.debug("block_header", block_header)
+        logging.debug("unpacked", struct.unpack_from("<32s", block_header) )
         if struct.unpack_from("<32s", block_header)[0] != prev_hash:
             return False
-        print("hash ok, then nonce")
+        logging.debug("hash ok, then nonce")
         return self.verify_nonce(block_header)
 
     def verify_nonce(self, block_header):
