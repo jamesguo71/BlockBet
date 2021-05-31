@@ -56,7 +56,6 @@ class Blockchain:
         Send requests to the network to download whole blockchain from peers
         """
         req = struct.pack('I', MessageType.IBD_REQUEST)
-        self.peer.register_msg_handler(MessageType.IBD_RESPONSE, self.ibd_response_handler)
         self.peer.send_signed_data(req)
         print("[IBD] IBD Request sent")
 

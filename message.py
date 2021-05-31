@@ -13,7 +13,7 @@ block_header_fmt = '<32sIII'
 
 
 class MessageType(enum.IntEnum):
-    IBD_REQUEST = 1
-    IBD_RESPONSE = 2
-    NEW_BLOCK = 3
+    IBD_REQUEST = 1 # Request to download whole blockchain from peers
+    IBD_RESPONSE = 2 # Response of whole blockchain download from peers
+    NEW_BLOCK = 3 # A new valid block found
 
