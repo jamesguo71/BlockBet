@@ -46,7 +46,7 @@ class Blockchain:
         start = struct.calcsize("I") # message type
         hdr_size = struct.calcsize(block_header_fmt)
         while start < len(data):
-            if not self.verify_header(prev_hash, data[:hdr_size]):
+            if not self.verify_header(prev_hash, data[start:start+hdr_size]):
                 print("ibd: Header verification failed")
                 break
             else:
