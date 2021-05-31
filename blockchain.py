@@ -4,13 +4,14 @@ import logging
 import struct
 import threading
 import time
+import random
 from typing import List
 
 from peer import Peer
 from message import MessageType, block_header_fmt, bet_fmt
 
 # Hoping for 20secs per block with this difficulty level, but depends on host machines
-ZEROS = 16
+ZEROS = 22
 
 GENESIS_HASH = hashlib.sha256(bytes("0b" + 256 * '0', "ascii")).digest()
 
@@ -141,17 +142,16 @@ class Blockchain:
             prev_hash = GENESIS_HASH
         timestamp = int(time.time())
         bet_num = 4
-        nonce = 0
         while not self.stop_mining:
-            nonce += 1
+            nonce = random.randint(1, 10**10) # to increase the chance of a blockchain fork
             header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
             if self.verify_nonce(header):
-                print("[INFO] Mining succeeded. Current blockchain height:", len(self.blockchain))
-                print("[INFO] Nonces of last 5 blocks:", [str(block.nonce) for block in self.blockchain[-5:]])
                 # Todo: Add Bets
                 bets = [b"this is a sample bet", b"another one", b"guess", b"what"]
                 new_block = Block(prev_hash, timestamp, nonce, bet_num, bets)
                 self.blockchain.append(new_block)
+                print("[INFO] Mining succeeded. Current blockchain height:", len(self.blockchain))
+                print("[INFO] Nonces of last 5 blocks:", [str(block.nonce) for block in self.blockchain[-5:]])
                 self.broadcast_new_block(new_block)
                 prev_hash, nonce, timestamp, bet_num = \
                     self.calc_prev_hash(new_block), 0, int(time.time()), 4
