@@ -36,10 +36,13 @@ class Blockchain:
             self.restart_mining()
         else:
             # otherwise sync from other nodes
-            req = struct.pack('I', MessageType.IBD_REQUEST)
-            self.peer.register_msg_handler(MessageType.IBD_RESPONSE, self.ibd_response_handler)
-            self.peer.send_signed_data(req)
-            print("[IBD] IBD Request sent")
+            self.whole_blockchain_request()
+
+    def whole_blockchain_request(self):
+        req = struct.pack('I', MessageType.IBD_REQUEST)
+        self.peer.register_msg_handler(MessageType.IBD_RESPONSE, self.ibd_response_handler)
+        self.peer.send_signed_data(req)
+        print("[IBD] IBD Request sent")
 
     def ibd_response_handler(self, data, src):
         temp_blockchain = []
@@ -57,7 +60,7 @@ class Blockchain:
                 prev_hash = self.calc_prev_hash(block)
                 temp_blockchain.append(block)
         if len(self.blockchain) == 0 or len(temp_blockchain) > len(self.blockchain):
-            print("[IBD] Finished IBM from", src)
+            print("[IBD] Finished IBD from", src)
             self.blockchain = temp_blockchain
             self.restart_mining()
 
@@ -111,7 +114,8 @@ class Blockchain:
             prev_hash = GENESIS_HASH
         if not self.verify_header(prev_hash, data[:hdr_size]):
             print("[INFO] receive_new_block: Header verification failed")
-            return False
+            # Check if peer has a longer blockchain fork?
+            self.whole_blockchain_request()
         else:
             prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
             bets = []
