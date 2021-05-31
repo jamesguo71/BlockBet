@@ -53,7 +53,7 @@ class Blockchain:
                 nbytes, block = self._receive_block(prev_hash, data[start:])
                 print("Received IBD block of", nbytes, "bytes")
                 start += nbytes
-                prev_hash = block.prev_hash
+                prev_hash = self.calc_prev_hash(block)
                 temp_blockchain.append(block)
         if len(self.blockchain) == 0 or len(temp_blockchain) > len(self.blockchain):
             print("Finished IBM from", src)
