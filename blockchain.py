@@ -97,7 +97,7 @@ class Blockchain:
         ret = struct.pack(block_header_fmt, block.prev_hash, block.timestamp,
                                 block.nonce, block.bet_num)
         for i in range(block.bet_num):
-            ret += struct.pack(bet_fmt, block.bets[i].encode("ascii"))
+            ret += struct.pack(bet_fmt, block.bets[i])
         return ret
 
     def receive_new_block(self, data, src):
@@ -133,12 +133,12 @@ class Blockchain:
         nonce = 0
         while not self.stop_mining:
             nonce += 1
-            print("\r[INFO] Current block height", len(self.blockchain), "mining progress: %s" % nonce, end = "")
+            print("\r[INFO] Current block height: %s, " % len(self.blockchain) + "mining progress: %s" % nonce, end = "")
             header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
             if self.verify_nonce(header):
                 print("[INFO] mining succeeded.")
                 # Todo: Add Bets
-                bets = ["this is a sample bet", "another one", "guess", "what"]
+                bets = [b"this is a sample bet", b"another one", b"guess", b"what"]
                 new_block = Block(prev_hash, timestamp, nonce, bet_num, bets)
                 self.blockchain.append(new_block)
                 self.broadcast_new_block(new_block)
