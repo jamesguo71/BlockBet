@@ -185,4 +185,7 @@ class Blockchain:
     def print_mining_progress(self, nonce):
         print("[INFO] Current block height: %s, " % len(self.blockchain)
               + "mining progress: %s\r" % nonce, end="")
+        print([block.nonce for block in self.blockchain])
+        print('\033[F\033[F\033[K', end='')  # Up, Up, Clear line
+
 
