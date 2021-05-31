@@ -389,11 +389,12 @@ class Peer:
 				for e in range(int(entry_count)):
 					peer = readuntil(fd, b'\n')
 
+					## Todo: Make sure to remove a disconnected peer
+
 					## This will hold the signatures too
 					if peer not in self.peers and peer != self.host_name:
 						self.peers[peer] = {'sig': None}
 
-						## TODO: make sure the peer isn't me
 						print('[INFO] Added peer: %s' %(peer))
 
 				fd.close()
