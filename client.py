@@ -19,6 +19,7 @@ chain.initial_blockchain_download()
 peer.register_msg_handler(MessageType.IBD_REQUEST, chain.push_my_blockchain)
 peer.register_msg_handler(MessageType.NEW_BLOCK, chain.receive_new_block)
 
+pa.join()
 #while 1:
 #    line = input('..> ')
     # peer.send_signed_data(line.encode('utf-8'))

@@ -88,8 +88,9 @@ class Blockchain:
         response = struct.pack("I", MessageType.IBD_RESPONSE)
         for block in self.blockchain:
             response += self.add_block_bytes(block)
-        self.peer.send_signed_data(response, src)
         print("Sending whole blockchain to target", src)
+        self.peer.send_signed_data(response, src)
+
 
     def add_block_bytes(self, block):
         ret = struct.pack(block_header_fmt, block.prev_hash, block.timestamp,
