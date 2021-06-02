@@ -22,7 +22,6 @@ import threading
 
 
 class Bet:
-
      def __init__(self):
         """
         Structure of a Bet
@@ -66,16 +65,6 @@ class BetList:
         @param betList: list of open bets
         """
         self.betList = {} # Type dictionary with key:id, value, Bet
-        #self.expireThread = threading.Thread(target = self.removeExpire, args = ())
-        #self.expireThread.start()
-
-    #remove expired bets
-    # def removeExpire(self):
-    #     while True:
-    #         for bet in self.betList.items():
-    #             if is_expired(bet[1]):
-    #                 self.betList.pop(bet[0])
-
 
     def update_bets(self, updatedBets):
         for bet in updatedBets:
@@ -97,8 +86,11 @@ class BetList:
        return self.betList.values()
 
     def call_bet(self, betId, caller):
+        #check the it isn't expired
         ClosedBet(betId, caller)
 
     def is_expired(self, openbet):
         return time.time() > openbet.expire
             
+    def bet_to_string(self, betToConvert):
+        
