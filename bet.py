@@ -5,6 +5,7 @@ import select
 import struct
 import time
 import uuid
+import threading
 
 
 """ The Bet module has
@@ -65,8 +66,8 @@ class BetList:
         @param betList: list of open bets
         """
         self.betList = {} # Type dictionary with key:id, value, Bet
-        self.expireThread = Thread(target = self.removeExpire, args = ())
-        self.expireThread.start()
+        #self.expireThread = threading.Thread(target = self.removeExpire, args = ())
+        #self.expireThread.start()
 
     #remove expired bets
     # def removeExpire(self):
@@ -85,7 +86,7 @@ class BetList:
 
         #remove expired here??? Ask
         for bet in self.betList.items():
-                 if is_expired(bet[1]):
+                 if self.is_expired(bet[1]):
                      self.betList.pop(bet[0])
 
 
