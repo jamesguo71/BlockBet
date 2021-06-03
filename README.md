@@ -45,7 +45,20 @@ If a peer receives a message with a size field (described later) of 0 then it as
 
 ### Blockchain
 
-The Blockchain is responsible for picking the blocks out of Peer and either beginning the hash to compute a new block or adding the newly computed block to the chain. It is agnostic of the structure of the Bet data.
+The Blockchain module is responsible for synchronizing the blockchain with peers in the network. It relies on Peer to download the existing blockchain from other nodes, and also send the blockchain it holds upon request from its peers.
+
+This module also holds a mining thread to compute a new block based on the last block in the current blockchain. If the mining succeeds, it will collect new bets from the Bet module and put these bets on the new block and broadcast it to peers. If it receives a new valid block thorough Peer from the network, it will add this block to its blockchain and start mining afresh.
+
+When blockchain forks occur, each peer will request and check if there's a longer blockchain in the network, and change its blockchain if so. 
+
+Structure of a block:
+```
+prev_hash: 32 bytes (char)
+timestamp: unsigned int (32 bit)
+nonce: unsigned int (32 bit)
+bet_num: number of bets in the block, unsigned int (32 bit)
+bets: bet_num of bets
+```
 
 ### Bet
 
