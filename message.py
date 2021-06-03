@@ -1,6 +1,6 @@
 import enum
 
-bet_fmt = "64s"
+bet_fmt = "1000s"
 block_header_fmt = '<32sIII'
 # < : little endian
 # 32s : prev_hash of 32 bytes (char) +
