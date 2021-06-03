@@ -78,22 +78,26 @@ class BetList:
         self.currentRoundBets = []
 
 
+    def recieve_bets(self, data):
+        """
+        When a new is heard from it's peers, add it to the currentRoundBets
+        """
+        data = data[struct.calcsize("I"):]  # skip message type field
+
+        byte_bet = struct.unpack_from(bet_fmt, data)
+        string_bet =  byte_bet.decode("utf-8") 
+        self.currentRoundBets.append(self.string_to_bet(string_bet))
+     
+
     def collect_bets(self, n):
-        if len(self.currentRoundBets < n):
-
-        return 
-    
-
-    def give_blockchain_bets(self, n):
         return_list = []
 
-        
         if len(self.currentRoundBets < n):
-            return_list = betList_ts(self.currentRoundBets)
+            return_list = self.betList_ts(self.currentRoundBets)
             self.update_bets(self.currentRoundBets)
             self.currentRoundBets = []
         else:
-            return_list = betList_ts(self.currentRoundBets[0:n])
+            return_list = self.betList_ts(self.currentRoundBets[0:n])
             self.update_bets(self.currentRoundBets[0:n])
             self.currentRoundBets = self.currentRoundBets[n:]
 
@@ -105,13 +109,6 @@ class BetList:
         """
         @param updatedBets: list of string bets that are confirmed from chain
         """
-
-        # updatedConvertedBets = []
-
-        # #convert bets into bet obejcts
-        # for stringBet in updatedBets:
-        #     updatedConvertedBets.append(self.string_to_bet(stringBet))
-
         for bet in updatedBets:
             if isinstance(bet, ClosedBet): 
                 self.betList.pop(bet.betId) #remove all bets that were closed
@@ -130,7 +127,7 @@ class BetList:
         """
         newBet = OpenBet(0, origin, info, winCond, amt)
         request = struct.pack("I", MessageType.NEW_BET)
-        request += struct.pack(bet_fmt, repr(newBet))
+        request += struct.pack(bet_fmt, bytes(repr(newBet)), 'utf-8')
         self.peer.send_signed_data(request)
 
         self.currentRoundBets.append(newBet)
@@ -141,18 +138,18 @@ class BetList:
         """
         Returns called bet bet object (as a string) to peer to be braodcasted
         """
-        request = struct.pack("I", MessageType.CALL_BET)
+        request = struct.pack("I", MessageType.NEW_BET)
 
         newClosedBet = ClosedBet(betId, caller)
         if betId not in self.betList or self.is_expired(self.betList[betId]):
             return    #check the it isn't expired
         else:
-            request += struct.pack(bet_fmt, repr(newClosedBet))
+            request += struct.pack(bet_fmt, bytes(repr(newClosedBet)), 'utf-8')
 
         self.peer.send_signed_data(request)
 
         self.currentRoundBets.append(newClosedBet)
-        return(repr(newClosedBet))
+        return repr(newClosedBet)
 
 
     def get_open_bets(self):
@@ -195,7 +192,7 @@ class BetList:
     def betList_ts(self, betlist):
         stringBets = []
         for bet in betlist:
-            stringBets.append(repr(bet))
+            stringBets.append(bytes(repr(bet)), 'utf-8')
 
         return stringBets
 
