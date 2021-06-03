@@ -1,6 +1,6 @@
 import enum
 
-bet_fmt = "64s"
+bet_fmt = "1000s"
 block_header_fmt = '<32sIII'
 # < : little endian
 # 32s : prev_hash of 32 bytes (char) +
@@ -17,3 +17,4 @@ class MessageType(enum.IntEnum):
     IBD_RESPONSE = 2 # Response of whole blockchain download from peers
     NEW_BLOCK = 3 # A new valid block found
 
+    NEW_BET = 4 # Request to place a new open bet
