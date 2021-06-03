@@ -7,14 +7,14 @@ import time
 import random
 from typing import List
 
+from bet import BetList
 from peer import Peer
-from message import MessageType, block_header_fmt, bet_fmt
+from message import MessageType, block_header_fmt, bet_fmt, hash_header_fmt
 
 # Hoping for 20secs per block with this difficulty level, but depends on host machines
 ZEROS_NUM = 22
 # The hash expected to appear in the first REAL block of the blockchain
 GENESIS_HASH = hashlib.sha256(bytes("0b" + 256 * '0', "ascii")).digest()
-
 
 class Block:
 
@@ -36,8 +36,9 @@ class Block:
 
 class Blockchain:
 
-    def __init__(self, peer: Peer):
+    def __init__(self, peer: Peer, betlist: BetList):
         self.peer = peer
+        self.betlist = betlist
         self.blockchain = []  # type: List[Block]
         self.mining_thread = None # Just a placeholder, will be initialized later
         self.is_mining = False # To identify if mining already begun
@@ -70,7 +71,7 @@ class Blockchain:
         temp_blockchain = []
         prev_hash = GENESIS_HASH
         start = struct.calcsize("I")  # message type
-        hdr_size = struct.calcsize(block_header_fmt)
+        hdr_size = struct.calcsize(hash_header_fmt)
         while start < len(data):
             # Received data contains the whole blockchain, so we loop over it to get all the blocks
             if not self.verify_header(prev_hash, data[start:start + hdr_size]):
@@ -86,6 +87,7 @@ class Blockchain:
             # Only if the nodes' blockchain is zero length, or the received blockchain is longer
             print("[IBD] Finished IBD from", src)
             self.blockchain = temp_blockchain
+            self.on_blockchain_changed()
             self.restart_mining()
 
     @staticmethod
@@ -147,26 +149,28 @@ class Blockchain:
         """
         data = data[struct.calcsize("I"):]  # skip message type field
 
-        hdr_size = struct.calcsize(block_header_fmt)
+        hash_hdr_size = struct.calcsize(hash_header_fmt)
         if len(self.blockchain) > 0:
             prev_hash = self.calc_prev_hash(self.blockchain[-1])
         else:
             prev_hash = GENESIS_HASH
-        if not self.verify_header(prev_hash, data[:hdr_size]):
+        if not self.verify_header(prev_hash, data[:hash_hdr_size]):
             print("[INFO] receive_new_block: Header verification failed")
             # download peers' block chain to check if there's a longer blockchain fork
             self.whole_blockchain_request()
         else:
+            hdr_size = struct.calcsize(block_header_fmt)
             prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
             bets = []
             for _ in range(bet_num):
                 bet, = struct.unpack_from(bet_fmt, data[hdr_size:])
                 bets.append(bet)
-            self.blockchain.append(Block(prev_hash, timestamp, nonce, bet_num, bets))
+            new_block = Block(prev_hash, timestamp, nonce, bet_num, bets)
+            self.blockchain.append(new_block)
+            self.on_blockchain_changed()
             print("[SUCCESS] Received a new valid block from ", src)
             print("[INFO] Current blockchain height:", len(self.blockchain))
             print("[INFO] Nonces of last 5 blocks:", [str(block.nonce) for block in self.blockchain[-5:]])
-
             self.restart_mining()
 
     def mining(self):
@@ -175,28 +179,27 @@ class Blockchain:
             prev_hash = self.calc_prev_hash(from_block)
         else:
             prev_hash = GENESIS_HASH
-        timestamp = int(time.time())
-        bet_num = 4
         while not self.stop_mining:
             # use random nonce to increase the chance of a blockchain fork
+            timestamp = int(time.time())
             nonce = random.randint(1, 10**9)
-            header = struct.pack(block_header_fmt, prev_hash, timestamp, nonce, bet_num)
+            header = struct.pack(hash_header_fmt, prev_hash, timestamp, nonce)
             if self.verify_nonce(header):
-                # Todo: Add Bets
-                bets = [b"this is a sample bet", b"another one", b"guess", b"what"]
+                bets = self.betlist.collect_bets(10)
+                bet_num = len(bets)
                 new_block = Block(prev_hash, timestamp, nonce, bet_num, bets)
                 self.blockchain.append(new_block)
                 print("[INFO] Mining succeeded. Current blockchain height:", len(self.blockchain))
                 print("[INFO] Nonces of last 5 blocks:", [str(block.nonce) for block in self.blockchain[-5:]])
                 self.broadcast_new_block(new_block)
-                prev_hash, nonce, timestamp, bet_num = \
-                    self.calc_prev_hash(new_block), 0, int(time.time()), 4
+                self.on_blockchain_changed()
+                prev_hash = self.calc_prev_hash(new_block)
 
     @staticmethod
     def calc_prev_hash(block):
         # Calculate the header hash of a block
-        header = struct.pack(block_header_fmt, block.prev_hash,
-                             block.timestamp, block.nonce, block.bet_num)
+        header = struct.pack(hash_header_fmt, block.prev_hash,
+                             block.timestamp, block.nonce)
         dgst = hashlib.sha256(header).digest()
         return dgst
 
@@ -221,4 +224,7 @@ class Blockchain:
         if bin_str[:ZEROS_NUM] == '0' * ZEROS_NUM:
             return True
         return False
+
+    def on_blockchain_changed(self):
+        self.betlist.update_betlist([bet for block in self.blockchain for bet in block.bets])
 

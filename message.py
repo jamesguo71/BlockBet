@@ -8,8 +8,8 @@ block_header_fmt = '<32sIII'
 # I : nonce, unsigned int (32 bit) +
 # I : number of bets in the block, unsigned int (32 bit) +
 
-# <32sII = little endian | byte[32] | unsigned int | unsigned int
-
+# <32sIII = little endian | byte[32] | unsigned int | unsigned int | unsigned int
+hash_header_fmt = '<32sII'
 
 
 class MessageType(enum.IntEnum):

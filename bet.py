@@ -24,7 +24,7 @@ class Bet:
 
 class OpenBet(Bet):
 
-    def __init__(self, id, origin, info, winCond, amt, expiration):
+    def __init__(self, id: int, origin: str, info: str, winCond: str, amt: str, expiration: str):
         """
         Structure of a OpenBet
         @param origin: the identifier for the peer the originally placed the bet
@@ -34,18 +34,18 @@ class OpenBet(Bet):
         """
         super().__init__()
         if id == 0:
-            self.id = uuid.uuid1()  # random ID for each bet generated with UUID
+            self.id = str(uuid.uuid1())  # random ID for each bet generated with UUID
         else:
-            self.id = id
+            self.id = str(id)
         self.originator = origin
         self.event_info = info
         self.win_cond = winCond
         self.amt = amt
-        self.expire = time.time() + expiration  # current expiration of bets is after one minute
+        self.expire = float(expiration)  # current expiration of bets is after one minute
 
     def __repr__(self):
-        return repr('open ' + self.id + " " + self.originator + " " + self.event_info + " "
-                    + self.win_cond + " " + self.amt + self.expire)
+        return 'open|' + self.id + "|" + self.originator + "|" + self.event_info + "|"\
+                    + self.win_cond + "|" + self.amt + "|" + str(self.expire) + "|"
 
 
 class ClosedBet(Bet):
@@ -61,7 +61,7 @@ class ClosedBet(Bet):
         self.caller = caller
 
     def __repr__(self):
-        return repr('closed ' + self.betId + " " + self.caller)
+        return 'closed|' + self.betId + "|" + self.caller
 
 
 class BetList:
@@ -75,15 +75,17 @@ class BetList:
         self.betList = {}  # Type dictionary with key:id, value, Bet
         self.currentRoundBets = []
 
-    def recieve_bets(self, data):
+    def receive_bets(self, data, src):
         """
         When a new is heard from it's peers, add it to the currentRoundBets
         """
+        print("Receive a bet:", data[:100], "number of bytes", len(data), "from", src)
         data = data[struct.calcsize("I"):]  # skip message type field
 
         byte_bet, = struct.unpack_from(bet_fmt, data)
         string_bet = byte_bet.decode("utf-8")
         self.currentRoundBets.append(self.string_to_bet(string_bet))
+        print("current round bets:", self.currentRoundBets)
 
     def collect_bets(self, n):
         """
@@ -114,9 +116,7 @@ class BetList:
                 self.betList[bet.id] = bet  # add sucessully placed bets
 
         # remove expired bets
-        for bet in self.betList.items():
-            if self.is_expired(bet[1]):
-                self.betList.pop(bet[0])
+        self.betList = {k: v for k, v in self.betList.items() if not self.is_expired(v)}
 
     def place_bet(self, origin, info, winCond, amt, expiration):
         """
@@ -124,7 +124,7 @@ class BetList:
         """
         newBet = OpenBet(0, origin, info, winCond, amt, expiration)
         request = struct.pack("I", MessageType.NEW_BET)
-        request += struct.pack(bet_fmt, bytes(repr(newBet)), 'utf-8')
+        request += struct.pack(bet_fmt, bytes(repr(newBet), 'utf-8'))
         self.peer.send_signed_data(request)
 
         self.currentRoundBets.append(newBet)
@@ -176,12 +176,13 @@ class BetList:
         """
         helper function that translates from strings to bets 
         """
-        strBet = stringBet.split()
-        if strBet[0].equals('open'):
-            assert len(strBet[1:]) == 6  # Six params
-            return OpenBet(*strBet[1:])
-        if strBet[0].equals('closed'):
+        strBet = stringBet.split("|")
+        if strBet[0] == "open":
+            return OpenBet(*strBet[1:7])
+        if strBet[0] == 'closed':
             return ClosedBet(strBet[1], strBet[2])
+        print(type(strBet[0]), strBet[0], repr(strBet[0]))
+        raise Exception("Invalid bet", stringBet)
 
     def betList_ts(self, betlist):
         stringBets = []
@@ -189,3 +190,12 @@ class BetList:
             stringBets.append(bytes(repr(bet), 'utf-8'))
 
         return stringBets
+
+    def update_betlist(self, bet_strings):
+        new_betlist = {}
+        for bet_s in bet_strings:
+            string_bet = bet_s.decode("utf-8")
+            bet = self.string_to_bet(string_bet)
+            new_betlist[bet.id] = bet
+        self.betList = new_betlist
+        print("current bet list on the blockchain:", self.betList)

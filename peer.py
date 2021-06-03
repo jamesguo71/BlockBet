@@ -339,7 +339,7 @@ class Peer:
 
 		fd.close()
 
-		print('[INFO] Received a new block from: ', client)
+		print('[INFO] Received a new message from: ', client)
 
 		## Do I have the signature for this peer?
 		if self.get_peer_signature(client[0].encode('utf-8')):
