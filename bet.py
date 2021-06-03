@@ -89,7 +89,11 @@ class BetList:
         self.currentRoundBets.append(self.string_to_bet(string_bet))
      
 
+
     def collect_bets(self, n):
+        """
+        Gives blockchain a list of n bets from the current round to add to bloack
+        """
         return_list = []
 
         if len(self.currentRoundBets < n):
@@ -107,6 +111,7 @@ class BetList:
 
     def update_bets(self, updatedBets):
         """
+        Updates the master list of open bets
         @param updatedBets: list of string bets that are confirmed from chain
         """
         for bet in updatedBets:
@@ -158,7 +163,8 @@ class BetList:
         """
         open_bets = []
         for bet in self.betList.values():
-            open_bets.append(repr(bet))
+            if not self.is_expired(bet):
+                open_bets.append(repr(bet))
 
         return open_bets
 
@@ -170,7 +176,7 @@ class BetList:
         """
         userBets = []
         for bet in self.betList.values():
-                 if bet.originator == userId:
+                 if not self.is_expired(bet) and bet.originator == userId:
                         userBets.append(repr(bet))
         return userBets
 
