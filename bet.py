@@ -75,20 +75,44 @@ class BetList:
     def __init__(self, peer: Peer):
         self.peer = peer
         self.betList = {} # Type dictionary with key:id, value, Bet
+        self.currentRoundBets = []
 
+
+    def collect_bets(self, n):
+        if len(self.currentRoundBets < n):
+
+        return 
+    
+
+    def give_blockchain_bets(self, n):
+        return_list = []
+
+        
+        if len(self.currentRoundBets < n):
+            return_list = betList_ts(self.currentRoundBets)
+            self.update_bets(self.currentRoundBets)
+            self.currentRoundBets = []
+        else:
+            return_list = betList_ts(self.currentRoundBets[0:n])
+            self.update_bets(self.currentRoundBets[0:n])
+            self.currentRoundBets = self.currentRoundBets[n:]
+
+        
+        return return_list
+        
 
     def update_bets(self, updatedBets):
         """
         @param updatedBets: list of string bets that are confirmed from chain
         """
 
-        updatedConvertedBets = []
+        # updatedConvertedBets = []
 
-        #convert bets into bet obejcts
-        for stringBet in updatedBets:
-            updatedConvertedBets.append(self.string_to_bet(stringBet))
+        # #convert bets into bet obejcts
+        # for stringBet in updatedBets:
+        #     updatedConvertedBets.append(self.string_to_bet(stringBet))
 
-        for bet in updatedConvertedBets:
+        for bet in updatedBets:
             if isinstance(bet, ClosedBet): 
                 self.betList.pop(bet.betId) #remove all bets that were closed
             elif isinstance(bet, OpenBet):
@@ -104,32 +128,42 @@ class BetList:
         """
         Returns new open bet object (as a string) to peer to be braodcasted
         """
-        response = struct.pack("I", MessageType.NEW_BET)
-        response += struct.pack(bet_fmt, OpenBet(0, origin, info, winCond, amt))
-        self.peer.send_signed_data(response)
-        
-    def get_open_bets(self):
-        """
-        Returns string list of bets that are callable
-        """
-        response = struct.pack("I", MessageType.ALL_BETS)
-        for bet in self.betList.values():
-            response += struct.pack(bet_fmt, repr(bet))
-        self.peer.send_signed_data(response)
+        newBet = OpenBet(0, origin, info, winCond, amt)
+        request = struct.pack("I", MessageType.NEW_BET)
+        request += struct.pack(bet_fmt, repr(newBet))
+        self.peer.send_signed_data(request)
 
+        self.currentRoundBets.append(newBet)
+        return repr(newBet)
+        
 
     def call_bet(self, betId, caller):
         """
         Returns called bet bet object (as a string) to peer to be braodcasted
         """
-        response = struct.pack("I", MessageType.CALL_BET)
+        request = struct.pack("I", MessageType.CALL_BET)
 
+        newClosedBet = ClosedBet(betId, caller)
         if betId not in self.betList or self.is_expired(self.betList[betId]):
-            return     #check the it isn't expired
+            return    #check the it isn't expired
         else:
-            response += struct.pack(bet_fmt, ClosedBet(betId, caller))
+            request += struct.pack(bet_fmt, repr(newClosedBet))
 
-        self.peer.send_signed_data(response)
+        self.peer.send_signed_data(request)
+
+        self.currentRoundBets.append(newClosedBet)
+        return(repr(newClosedBet))
+
+
+    def get_open_bets(self):
+        """
+        Returns string list of bets that are callable
+        """
+        open_bets = []
+        for bet in self.betList.values():
+            open_bets.append(repr(bet))
+
+        return open_bets
 
 
     def get_user_bets(self, userId):
@@ -140,7 +174,7 @@ class BetList:
         userBets = []
         for bet in self.betList.values():
                  if bet.originator == userId:
-                        userBets.append(bet)
+                        userBets.append(repr(bet))
         return userBets
 
 
@@ -157,5 +191,12 @@ class BetList:
             return OpenBet(strBet[1], strBet[2], strBet[3], strBet[4], strBet[5])
         if strBet[0].equals('closed'):     
             return ClosedBet(strBet[1], strBet[2]) 
+
+    def betList_ts(self, betlist):
+        stringBets = []
+        for bet in betlist:
+            stringBets.append(repr(bet))
+
+        return stringBets
 
 
