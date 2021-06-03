@@ -51,7 +51,7 @@ while True:
 	if event == sg.WIN_CLOSED or event == 'Exit':
 		break
 
-	
+	# Callable bets clicked
 	if event == "Callable Bets":
 		window["-ACCEPT_BTN-"].update(disabled = False)
 		is_on_callable = True
@@ -60,6 +60,7 @@ while True:
 		open_best_list = [x["event"] for x in bet_dict]
 		window['-BET_LIST-'].update(open_best_list)
 
+	# My Bets clicked
 	elif event == "My Bets":
 		window["-ACCEPT_BTN-"].update(disabled = True)
 		is_on_callable = False
@@ -67,6 +68,7 @@ while True:
 		pending_best_list = [x["event"] for x in bet_dict]
 		window['-BET_LIST-'].update(pending_best_list)
 
+	# Item in bet list clicked
 	elif event == '-BET_LIST-':    # A bet was chosen from the bet box
 		selected_bet = [x for x in bet_dict if x["event"] == values["-BET_LIST-"][0]][0]
 
@@ -74,11 +76,13 @@ while True:
 		window["-BET_VALUE-"].update(selected_bet["amount"])
 		window["-BET_EXPIRATION-"].update(selected_bet["expiration"])
 
+	# Send Button clicked
 	elif event == "-SEND_BTN-":
 		window["-EVENT_INPUT-"].update("")
 		window["-AMOUNT_INPUT-"].update("")
 		window["-EXPIRATION_INPUT-"].update("")
 
+	# Accept bet button clicked
 	elif event == "-ACCEPT_BTN-":
 		if selected_bet != None and is_on_callable:
 			accept_bet(selected_bet["uuid"])
