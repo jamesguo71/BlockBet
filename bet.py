@@ -211,6 +211,6 @@ class BetList:
         for bet_s in bet_strings:
             string_bet = bet_s.decode("utf-8")
             bet = self.string_to_bet(string_bet)
-            new_betlist[self.id] = bet
+            new_betlist[bet.id] = bet
         self.betList = new_betlist
         print("current bet list on the blockchain:", self.betList)
