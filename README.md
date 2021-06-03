@@ -62,7 +62,12 @@ bets: bet_num of bets
 
 ### Bet
 
-The Bet module takes in new and called bets from the GUI and sends them out to the network. It also maintains a list of valid open bets that the GUI is able to call.
+  
+The Bet module consists of 4 classes. The bet class with two sub classes of open bets and closed bets and a BetList class.
+
+Open bet objects are bets submitted by users in the UI that have an attatched expiration time. Closed bets are bets that have been called by a user.
+
+The BetList takes in new and called bets from the GUI and sends them out to the network. Additionally, it contains functionality to allow the GUI to get lists of all open bets or bets associated with a particualar user. The BetList also supplies the blockchain with a list of bets to put onto each sucessfully computed block.
 
 ### GUI
 
