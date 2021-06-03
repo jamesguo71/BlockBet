@@ -62,8 +62,7 @@ bets: bet_num of bets
 
 ### Bet
 
-  
-The Bet module consists of 4 classes. The bet class with two sub classes of open bets and closed bets and a BetList class.
+The Bet module consists of 4 classes. The bet class with two sub classes of open bets and closed bets and a BetList class. The bet leverages the Peer for all its broadcast and recieve funcationality.
 
 Open bet objects are bets submitted by users in the UI that have an attatched expiration time. Closed bets are bets that have been called by a user.
 
