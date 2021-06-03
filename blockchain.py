@@ -98,7 +98,7 @@ class Blockchain:
         prev_hash, timestamp, nonce, bet_num = struct.unpack_from(block_header_fmt, data)
         bets = []
         for _ in range(bet_num):
-            bet, = struct.unpack_from(bet_fmt, data[hdr_size:])
+            bet, = struct.unpack_from(bet_fmt, data[n_bytes:])
             bets.append(bet)
             n_bytes += struct.calcsize(bet_fmt)
         return n_bytes, Block(prev_hash, timestamp, nonce, bet_num, bets)

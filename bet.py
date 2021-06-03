@@ -61,6 +61,7 @@ class ClosedBet(Bet):
         super().__init__()
         self.id = id
         self.caller = caller
+        self.expire = float("inf")
 
     def __repr__(self):
         return 'closed|' + self.id + "|" + self.caller
@@ -115,7 +116,10 @@ class BetList:
         """
         for bet in updatedBets:
             if isinstance(bet, ClosedBet):
-                self.betList.pop(bet.id)  # remove all bets that were closed
+                try:
+                    self.betList.pop(bet.id)  # remove all bets that were closed
+                except:
+                    print(f"[ERR] {bet.id}")
             elif isinstance(bet, OpenBet):
                 self.betList[bet.id] = bet  # add sucessully placed bets
 
@@ -156,7 +160,7 @@ class BetList:
         """
         open_bets = []
         for bet in self.betList.values():
-            if not self.is_expired(bet):
+            if not self.is_expired(bet) and isinstance(bet, OpenBet):
                 open_bets.append({
                     "uuid": bet.id,
                     "event": bet.event_info,
@@ -202,7 +206,7 @@ class BetList:
     def betList_ts(self, betlist):
         stringBets = []
         for bet in betlist:
-            stringBets.append(bytes(repr(bet), 'utf-8'))
+            stringBets.append(struct.pack(bet_fmt, bytes(repr(bet), 'utf-8')))
 
         return stringBets
 
@@ -211,6 +215,10 @@ class BetList:
         for bet_s in bet_strings:
             string_bet = bet_s.decode("utf-8")
             bet = self.string_to_bet(string_bet)
-            new_betlist[bet.id] = bet
+            if isinstance(bet, OpenBet):
+                new_betlist[bet.id] = bet
+            elif bet.id in new_betlist:
+                new_betlist.pop(bet.id)
+
         self.betList = new_betlist
         print("current bet list on the blockchain:", self.betList)

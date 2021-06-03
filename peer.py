@@ -283,8 +283,9 @@ class Peer:
 			targets = self.peers
 		else:
 			targets = [ target ]
-
-		for p in targets:
+		
+		target_copy = targets.copy()
+		for p in target_copy:
 			fd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 			try:

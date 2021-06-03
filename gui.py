@@ -2,9 +2,11 @@ import threading
 
 import PySimpleGUI as sg
 import socket
+from datetime import datetime
 # from testAPI import *
 # Make sure you are connected to the VPN before running this
 host_name = socket.gethostbyname(socket.gethostname())
+
 
 def build_layout():
 
@@ -13,8 +15,7 @@ def build_layout():
 	tb = {"font":("Helvetica", 12)}
 
 	# --------------------------------- Define Layout ---------------------------------
-	left_col = [[sg.Button('Callable Bets', key="-CALLABLE_BETS-"),
-				 sg.Button('My Bets', key="-MY_BETS-")],
+	left_col = [[sg.Button('Callable Bets', key="-CALLABLE_BETS-"),sg.Button('My Bets', key="-MY_BETS-"), sg.Button('Refresh', key="-REFRESH-")],
 				[sg.Listbox(values=[], enable_events=True, size=(40,20), key='-BET_LIST-')]
 				]
 
@@ -114,9 +115,13 @@ def event_loop(window, betlist):
 				selected_bet = candidates[0]
 				window["-BET_EVENT-"].update(selected_bet["event"])
 				window["-BET_VALUE-"].update(selected_bet["amount"])
-				window["-BET_EXPIRATION-"].update(selected_bet["expiration"])
-				window["-BET_WIN_COND-"].update(selected_bet["win_condition"])
 
+				expire_formatted = datetime.utcfromtimestamp(selected_bet["expiration"]).strftime("%Y-%m-%d %H:%M:%S")
+				window["-BET_EXPIRATION-"].update(expire_formatted)
+				try: 
+					window["-BET_WIN_COND-"].update(selected_bet["win_condition"])
+				except:
+					window["-BET_WIN_COND-"].update("n/a")
 
 		# Send Button clicked
 		elif event == "-SEND_BTN-":
@@ -143,6 +148,19 @@ def event_loop(window, betlist):
 				bet_dict = betlist.get_open_bets()
 				open_best_list = [x["event"] for x in bet_dict]
 				window['-BET_LIST-'].update(open_best_list)
+		
+		elif event == "-REFRESH-":
+			if is_on_callable:
+				# Refresh callable list
+				bet_dict = betlist.get_open_bets()
+				open_best_list = [x["event"] for x in bet_dict]
+				window['-BET_LIST-'].update(open_best_list)
+			else:
+				# Refresh my bets list
+				bet_dict = betlist.get_user_bets(host_name)
+				pending_best_list = [x["event"] for x in bet_dict]
+				window['-BET_LIST-'].update(pending_best_list)
+
 
 
 
