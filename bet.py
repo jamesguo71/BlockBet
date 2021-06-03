@@ -24,7 +24,7 @@ class Bet:
 
 class OpenBet(Bet):
 
-    def __init__(self, id, origin, info, winCond, amt):
+    def __init__(self, id, origin, info, winCond, amt, expiration):
         """
         Structure of a OpenBet
         @param origin: the identifier for the peer the originally placed the bet
@@ -41,7 +41,7 @@ class OpenBet(Bet):
         self.event_info = info
         self.win_cond = winCond
         self.amt = amt
-        self.expire = time.time() + 60 # current expiration of bets is after one minute
+        self.expire = time.time() + expiration # current expiration of bets is after one minute
 
     def __repr__(self):
         return repr('open ' + self.id + " " + self.originator + " " + self.event_info + " " 
