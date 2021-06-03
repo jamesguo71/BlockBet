@@ -23,9 +23,9 @@ right_col = [	[sg.Text('Bet Event', **td, **th )],
 			  	[sg.Text("_" * 50)],
 
 				[sg.Text('Make a bet', **td, **th)],
-				[sg.Text("Bet Event:", justification="l"), sg.Input(key="-EVENT_INPUT-")],
-				[sg.Text("Bet Amount:", justification="l"), sg.Input(key="-AMOUNT_INPUT-")],
-				[sg.Text("Bet Expiration (mins):",justification="l"), sg.Input(key="-EXPIRATION_INPUT-")],
+				[sg.Text("Bet Event:", justification="l"), sg.Input(key="-EVENT_INPUT-", enable_events=True)],
+				[sg.Text("Bet Amount:", justification="l"), sg.Input(key="-AMOUNT_INPUT-", enable_events=True)],
+				[sg.Text("Bet Expiration (mins):",justification="l"), sg.Input(key="-EXPIRATION_INPUT-", enable_events=True)],
 				[sg.Button("Send Bet", key="-SEND_BTN-")]
 			]
 
@@ -34,7 +34,7 @@ layout = [[sg.Column(left_col, element_justification='c'), sg.VSeperator(),sg.Co
 
 
 # --------------------------------- Create Window ---------------------------------
-window = sg.Window('Multiple Format Image Viewer', layout,resizable=True)
+window = sg.Window('Blockchain Bet GUI', layout, resizable=True)
 
 
 
@@ -46,11 +46,37 @@ is_on_callable = False
 
 while True:
 	event, values = window.read()
+
+	# ---------- Exit Event Section ----------
 	if event in (sg.WIN_CLOSED, 'Exit'):
 		break
 	if event == sg.WIN_CLOSED or event == 'Exit':
 		break
 
+	# ---------- Input Validation Section ----------
+	#Char limit check for event input
+	if event == "-EVENT_INPUT-" and values["-EVENT_INPUT-"] and len(values["-EVENT_INPUT-"]) > 100:
+		window["-EVENT_INPUT-"].update(values["-EVENT_INPUT-"][0:100])
+
+	#Char limit check for amount input
+	if event == "-AMOUNT_INPUT-" and values["-AMOUNT_INPUT-"] and len(values["-AMOUNT_INPUT-"]) > 10:
+		window["-AMOUNT_INPUT-"].update(values["-AMOUNT_INPUT-"][0:10])
+
+	#Char limit check for expiration input
+	if event == "-EXPIRATION_INPUT-" and values["-EXPIRATION_INPUT-"] and len(values["-EXPIRATION_INPUT-"]) > 10:
+		window["-EXPIRATION_INPUT-"].update(values["-EXPIRATION_INPUT-"][0:10])
+
+	#Numbers only check for amount input
+	if event == "-AMOUNT_INPUT-" and values["-AMOUNT_INPUT-"] and values["-AMOUNT_INPUT-"][-1] not in ('0123456789.-'):
+		window["-AMOUNT_INPUT-"].update(values["-AMOUNT_INPUT-"][:-1])
+
+	#Numbers only check for expiration input
+	if event == "-EXPIRATION_INPUT-" and values["-EXPIRATION_INPUT-"] and values["-EXPIRATION_INPUT-"][-1] not in ('0123456789.-'):
+		window["-EXPIRATION_INPUT-"].update(values["-EXPIRATION_INPUT-"][:-1])
+
+
+	
+	# ---------- Click Events Section ----------
 	# Callable bets clicked
 	if event == "Callable Bets":
 		window["-ACCEPT_BTN-"].update(disabled = False)
@@ -89,8 +115,6 @@ while True:
 			bet_dict = get_open_bets()
 			open_best_list = [x["event"] for x in bet_dict]
 			window['-BET_LIST-'].update(open_best_list)
-
-
 
 
 	print(event, values)
