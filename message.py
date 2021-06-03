@@ -17,3 +17,7 @@ class MessageType(enum.IntEnum):
     IBD_RESPONSE = 2 # Response of whole blockchain download from peers
     NEW_BLOCK = 3 # A new valid block found
 
+    NEW_BET = 4 # Request to place a new open bet
+    CALL_BET = 5 # Request to call and exsisting bet
+    ALL_BETS = 6 # Request to get all open bets
+

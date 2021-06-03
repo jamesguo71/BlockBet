@@ -1,11 +1,12 @@
-import socket
-import threading
 import sys
 import select
-import struct
 import time
 import uuid
 import threading
+
+from peer import Peer
+import struct
+from message import MessageType, bet_fmt
 
 
 class Bet:
@@ -20,9 +21,10 @@ class Bet:
         self.header = 'bet'  # Used to identify the broadcast message is a Bet < do I need to change this?
       
 
+
 class OpenBet(Bet):
 
-    def __init__(self, origin, info, winCond, amt):
+    def __init__(self, id, origin, info, winCond, amt):
         """
         Structure of a OpenBet
         @param origin: the identifier for the peer the originally placed the bet
@@ -31,7 +33,10 @@ class OpenBet(Bet):
         @param amt: a string with the amount value that the bet is placed for
         """
         super().__init__()
-        self.id = uuid.uuid1() #random ID for each bet generated with UUID
+        if id == 0:
+            self.id = uuid.uuid1() #random ID for each bet generated with UUID
+        else:
+            self.id = id
         self.originator = origin
         self.event_info = info
         self.win_cond = winCond
@@ -42,6 +47,7 @@ class OpenBet(Bet):
         return repr('open ' + self.id + " " + self.originator + " " + self.event_info + " " 
         + self.win_cond + " " + self.amt)
       
+
 
 class ClosedBet(Bet):
 
@@ -57,7 +63,7 @@ class ClosedBet(Bet):
     
      def __repr__(self):
         return repr('closed ' + self.betId + " " + self.caller)
-      
+
       
 
 class BetList:  
@@ -66,7 +72,8 @@ class BetList:
     BetList is updated after each sucessful 
     """
 
-    def __init__(self):
+    def __init__(self, peer: Peer):
+        self.peer = peer
         self.betList = {} # Type dictionary with key:id, value, Bet
 
 
@@ -97,13 +104,33 @@ class BetList:
         """
         Returns new open bet object (as a string) to peer to be braodcasted
         """
-        return OpenBet(origin, info, winCond, amt)
+        response = struct.pack("I", MessageType.NEW_BET)
+        response += struct.pack(bet_fmt, OpenBet(0, origin, info, winCond, amt))
+        self.peer.send_signed_data(response)
         
     def get_open_bets(self):
         """
         Returns string list of bets that are callable
         """
-        return self.betList.values()
+        response = struct.pack("I", MessageType.ALL_BETS)
+        for bet in self.betList.values():
+            response += struct.pack(bet_fmt, repr(bet))
+        self.peer.send_signed_data(response)
+
+
+    def call_bet(self, betId, caller):
+        """
+        Returns called bet bet object (as a string) to peer to be braodcasted
+        """
+        response = struct.pack("I", MessageType.CALL_BET)
+
+        if betId not in self.betList or self.is_expired(self.betList[betId]):
+            return     #check the it isn't expired
+        else:
+            response += struct.pack(bet_fmt, ClosedBet(betId, caller))
+
+        self.peer.send_signed_data(response)
+
 
     def get_user_bets(self, userId):
         """
@@ -112,23 +139,23 @@ class BetList:
         """
         userBets = []
         for bet in self.betList.values():
-                 if bet.id == userId:
+                 if bet.originator == userId:
                         userBets.append(bet)
         return userBets
 
-    def call_bet(self, betId, caller):
-        """
-        Returns called bet bet object (as a string) to peer to be braodcasted
-        """
-        #check the it isn't expired
-        if betId not in self.betList or self.is_expired(self.betList[betId]):
-            return "Error this is not a valid open bet"
-        return ClosedBet(betId, caller)
 
     def is_expired(self, openbet):
         return time.time() > openbet.expire
-            
+
+    
     def string_to_bet(self, stringBet):
-        return        
+        """
+        helper function that translates from strings to bets 
+        """
+        strBet = stringBet.split( )
+        if strBet[0].equals('open'):
+            return OpenBet(strBet[1], strBet[2], strBet[3], strBet[4], strBet[5])
+        if strBet[0].equals('closed'):     
+            return ClosedBet(strBet[1], strBet[2]) 
 
 
