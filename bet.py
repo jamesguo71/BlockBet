@@ -52,18 +52,18 @@ class OpenBet(Bet):
 
 class ClosedBet(Bet):
 
-    def __init__(self, betId, caller):
+    def __init__(self, id, caller):
         """
         Structure of a ClosedBet
         @param betId: the id identifieder for the original bet this bet is referring to
         @param caller: the identifier for the peer who is calling the bet
         """
         super().__init__()
-        self.betId = betId
+        self.id = id
         self.caller = caller
 
     def __repr__(self):
-        return 'closed|' + self.betId + "|" + self.caller
+        return 'closed|' + self.id + "|" + self.caller
 
 
 class BetList:
@@ -115,7 +115,7 @@ class BetList:
         """
         for bet in updatedBets:
             if isinstance(bet, ClosedBet):
-                self.betList.pop(bet.betId)  # remove all bets that were closed
+                self.betList.pop(bet.id)  # remove all bets that were closed
             elif isinstance(bet, OpenBet):
                 self.betList[bet.id] = bet  # add sucessully placed bets
 
@@ -162,7 +162,8 @@ class BetList:
                     "event": bet.event_info,
                     "amount": bet.amt,
                     "expiration": bet.expire,
-                     "outcome": -1, # DUMMY, just to meet GUI expectation
+                    "win_condition": bet.win_cond,
+                    "outcome": -1, # DUMMY, just to meet GUI expectation -- GUI doesnt need
                 })
         return open_bets
 
@@ -210,6 +211,6 @@ class BetList:
         for bet_s in bet_strings:
             string_bet = bet_s.decode("utf-8")
             bet = self.string_to_bet(string_bet)
-            new_betlist[bet.id] = bet
+            new_betlist[self.id] = bet
         self.betList = new_betlist
         print("current bet list on the blockchain:", self.betList)

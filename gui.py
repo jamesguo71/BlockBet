@@ -115,7 +115,7 @@ def event_loop(window, betlist):
 				window["-BET_EVENT-"].update(selected_bet["event"])
 				window["-BET_VALUE-"].update(selected_bet["amount"])
 				window["-BET_EXPIRATION-"].update(selected_bet["expiration"])
-				# window["-BET_WIN_COND-"].update(selected_bet["win_condition"])
+				window["-BET_WIN_COND-"].update(selected_bet["win_condition"])
 
 
 		# Send Button clicked
@@ -144,8 +144,6 @@ def event_loop(window, betlist):
 				open_best_list = [x["event"] for x in bet_dict]
 				window['-BET_LIST-'].update(open_best_list)
 
-
-		print(event, values)
 
 
 

@@ -1,5 +1,7 @@
 pypy3_venv
 /playground.py
+myfile.txt
+*.pem
 
 __pycache__/
 workspace.code-workspace
