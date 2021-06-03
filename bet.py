@@ -3,6 +3,7 @@ import select
 import time
 import uuid
 import threading
+from typing import Dict, Any
 
 from peer import Peer
 import struct
@@ -24,7 +25,7 @@ class Bet:
 
 class OpenBet(Bet):
 
-    def __init__(self, id: int, origin: str, info: str, winCond: str, amt: str, expiration: str):
+    def __init__(self, id: str, origin: str, info: str, winCond: str, amt: str, expiration):
         """
         Structure of a OpenBet
         @param origin: the identifier for the peer the originally placed the bet
@@ -33,7 +34,8 @@ class OpenBet(Bet):
         @param amt: a string with the amount value that the bet is placed for
         """
         super().__init__()
-        if id == 0:
+        # this is a hack, but don't modify '0' if you don't change other code
+        if id == '0':
             self.id = str(uuid.uuid1())  # random ID for each bet generated with UUID
         else:
             self.id = str(id)
@@ -69,6 +71,8 @@ class BetList:
     BetList keeps the internal list of open bets that are avalible to be called
     BetList is updated after each sucessful 
     """
+    # Type hint
+    betList: Dict[str, OpenBet]
 
     def __init__(self, peer: Peer):
         self.peer = peer
@@ -122,12 +126,11 @@ class BetList:
         """
         Returns new open bet object (as a string) to peer to be braodcasted
         """
-        newBet = OpenBet(0, origin, info, winCond, amt, expiration)
+        newBet = OpenBet('0', origin, info, winCond, amt, time.time() + float(expiration) * 60)
         request = struct.pack("I", MessageType.NEW_BET)
         request += struct.pack(bet_fmt, bytes(repr(newBet), 'utf-8'))
-        self.peer.send_signed_data(request)
-
         self.currentRoundBets.append(newBet)
+        self.peer.send_signed_data(request)
         return repr(newBet)
 
     def call_bet(self, betId, caller):
@@ -138,13 +141,13 @@ class BetList:
 
         newClosedBet = ClosedBet(betId, caller)
         if betId not in self.betList or self.is_expired(self.betList[betId]):
+            print("bet id doesn't exits or bet is expired")
             return  # check the it isn't expired
-        else:
-            request += struct.pack(bet_fmt, bytes(repr(newClosedBet)), 'utf-8')
 
-        self.peer.send_signed_data(request)
-
+        request += struct.pack(bet_fmt, bytes(repr(newClosedBet), 'utf-8'))
+        self.betList.pop(betId)
         self.currentRoundBets.append(newClosedBet)
+        self.peer.send_signed_data(request)
         return repr(newClosedBet)
 
     def get_open_bets(self):
@@ -154,8 +157,13 @@ class BetList:
         open_bets = []
         for bet in self.betList.values():
             if not self.is_expired(bet):
-                open_bets.append(repr(bet))
-
+                open_bets.append({
+                    "uuid": bet.id,
+                    "event": bet.event_info,
+                    "amount": bet.amt,
+                    "expiration": bet.expire,
+                     "outcome": -1, # DUMMY, just to meet GUI expectation
+                })
         return open_bets
 
     def get_user_bets(self, userId):
@@ -166,7 +174,13 @@ class BetList:
         userBets = []
         for bet in self.betList.values():
             if not self.is_expired(bet) and bet.originator == userId:
-                userBets.append(repr(bet))
+                userBets.append({
+                    "uuid": bet.id,
+                    "event": bet.event_info,
+                    "amount": bet.amt,
+                    "expiration": bet.expire,
+                     "outcome": -1, # DUMMY, just to meet GUI expectation
+                })
         return userBets
 
     def is_expired(self, openbet):

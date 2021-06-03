@@ -1,6 +1,10 @@
-import PySimpleGUI as sg
-from testAPI import *
+import threading
 
+import PySimpleGUI as sg
+import socket
+# from testAPI import *
+# Make sure you are connected to the VPN before running this
+host_name = socket.gethostbyname(socket.gethostname())
 
 def build_layout():
 
@@ -9,7 +13,8 @@ def build_layout():
 	tb = {"font":("Helvetica", 12)}
 
 	# --------------------------------- Define Layout ---------------------------------
-	left_col = [[sg.Button('Callable Bets'), sg.Button('My Bets')],
+	left_col = [[sg.Button('Callable Bets', key="-CALLABLE_BETS-"),
+				 sg.Button('My Bets', key="-MY_BETS-")],
 				[sg.Listbox(values=[], enable_events=True, size=(40,20), key='-BET_LIST-')]
 				]
 
@@ -30,7 +35,8 @@ def build_layout():
 
 					[sg.Text('Make a bet', **td, **th)],
 					[sg.Text("Bet Event:", justification="l"), sg.Input(key="-EVENT_INPUT-", enable_events=True)],
-					[sg.Text("Bet Amount:", justification="l"), sg.Input(key="-AMOUNT_INPUT-", enable_events=True)],
+					[sg.Text("Win Condition:", justification="l"), sg.Input(key="-WIN_COND-", enable_events=True)],
+					 [sg.Text("Bet Amount:", justification="l"), sg.Input(key="-AMOUNT_INPUT-", enable_events=True)],
 					[sg.Text("Bet Expiration (mins):",justification="l"), sg.Input(key="-EXPIRATION_INPUT-", enable_events=True)],
 					[sg.Button("Send Bet", key="-SEND_BTN-")]
 				]
@@ -44,7 +50,7 @@ def build_layout():
 
 	return window
 
-def event_loop(window):
+def event_loop(window, betlist):
 
 	# ----- Run the Event Loop -----
 	# --------------------------------- Event Loop ---------------------------------
@@ -83,46 +89,58 @@ def event_loop(window):
 			window["-EXPIRATION_INPUT-"].update(values["-EXPIRATION_INPUT-"][:-1])
 
 
-		
+
 		# ---------- Click Events Section ----------
 		# Callable bets clicked
-		if event == "Callable Bets":
+		if event == "-CALLABLE_BETS-":
 			window["-ACCEPT_BTN-"].update(disabled = False)
 			is_on_callable = True
-
-			bet_dict = get_open_bets()
+			bet_dict = betlist.get_open_bets()
 			open_best_list = [x["event"] for x in bet_dict]
 			window['-BET_LIST-'].update(open_best_list)
 
 		# My Bets clicked
-		elif event == "My Bets":
+		elif event == "-MY_BETS-":
 			window["-ACCEPT_BTN-"].update(disabled = True)
 			is_on_callable = False
-			bet_dict = get_user_bets()
+			bet_dict = betlist.get_user_bets(host_name)
 			pending_best_list = [x["event"] for x in bet_dict]
 			window['-BET_LIST-'].update(pending_best_list)
 
 		# Item in bet list clicked
 		elif event == '-BET_LIST-':    # A bet was chosen from the bet box
-			selected_bet = [x for x in bet_dict if x["event"] == values["-BET_LIST-"][0]][0]
-
-			window["-BET_EVENT-"].update(selected_bet["event"])
-			window["-BET_VALUE-"].update(selected_bet["amount"])
-			window["-BET_EXPIRATION-"].update(selected_bet["expiration"])
-			# window["-BET_WIN_COND-"].update(selected_bet["win_condition"])
+			candidates = [x for x in bet_dict if x["event"] == values["-BET_LIST-"][0]]
+			if candidates:
+				selected_bet = candidates[0]
+				window["-BET_EVENT-"].update(selected_bet["event"])
+				window["-BET_VALUE-"].update(selected_bet["amount"])
+				window["-BET_EXPIRATION-"].update(selected_bet["expiration"])
+				# window["-BET_WIN_COND-"].update(selected_bet["win_condition"])
 
 
 		# Send Button clicked
 		elif event == "-SEND_BTN-":
+			event = values["-EVENT_INPUT-"]
+			win_cond = values['-WIN_COND-']
+			amount = values["-AMOUNT_INPUT-"]
+			expire = values["-EXPIRATION_INPUT-"]
+			threading.Thread(target=betlist.place_bet,
+							 args=(host_name, event, win_cond, amount, expire)
+							 ).start()
+
+
 			window["-EVENT_INPUT-"].update("")
+			window['-WIN_COND-'].update("")
 			window["-AMOUNT_INPUT-"].update("")
 			window["-EXPIRATION_INPUT-"].update("")
 
 		# Accept bet button clicked
 		elif event == "-ACCEPT_BTN-":
 			if selected_bet != None and is_on_callable:
-				accept_bet(selected_bet["uuid"])
-				bet_dict = get_open_bets()
+				threading.Thread(target=betlist.call_bet,
+								 args=(selected_bet["uuid"], host_name)
+								 ).start()
+				bet_dict = betlist.get_open_bets()
 				open_best_list = [x["event"] for x in bet_dict]
 				window['-BET_LIST-'].update(open_best_list)
 
@@ -148,13 +166,8 @@ def bet_strings_to_dicts(bet_list):
 		bets.append(bd)
 
 
-def main():
+def main(betlist):
 
 	window = build_layout()
-	event_loop(window)
+	event_loop(window, betlist)
 	window.close()
-
-
-
-if __name__ == "__main__":
-	main()
