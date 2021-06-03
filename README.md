@@ -4,6 +4,32 @@
 
 ## Team members: Fei Guo, Danielle Fang, Angus Emmett, John Berry 
 
+## Overview
+
+### Required packages
+
+The following packages are required to run this software:
+
+PyCryptoDome
+PySimpleGui
+
+They can be installed using pip3:
+
+```
+pip3 install pycryptodome
+pip3 install pysimplegui 
+
+```
+
+### Keys
+
+The network requires the use of public/private key pair. You can create one with the following commands:
+
+```
+openssl genrsa -out private.pem 512
+openssl rsa -in private.pem -pubout > public.pem
+```
+
 ## Components
 
 ### P2P Networking

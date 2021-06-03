@@ -5,7 +5,17 @@ import socket
 from datetime import datetime
 # from testAPI import *
 # Make sure you are connected to the VPN before running this
-host_name = socket.gethostbyname(socket.gethostname())
+try:
+	myhost = socket.gethostname()
+except socket.error as e:
+	print(f"[ERR] Failed to get hostname: {e}")
+	exit(0)
+
+try:
+	host_name = socket.gethostbyname(myhost)
+except socket.error as e:
+	print(f"[ERR] Failed to get host by name {e}")
+	exit(0)
 
 
 def build_layout():
@@ -129,6 +139,8 @@ def event_loop(window, betlist):
 			win_cond = values['-WIN_COND-']
 			amount = values["-AMOUNT_INPUT-"]
 			expire = values["-EXPIRATION_INPUT-"]
+			if len(event) == 0 or len(win_cond) == 0 or len(amount) == 0 or len(expire) == 0:
+				continue
 			threading.Thread(target=betlist.place_bet,
 							 args=(host_name, event, win_cond, amount, expire)
 							 ).start()
