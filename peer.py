@@ -329,7 +329,14 @@ class Peer:
 		## Read the data and signature
 		try:
 			data = fd.recv(data_len)
+			while len(data) < data_len:
+				print("[EXCEPTION] Data recv is not complete, now try to recv more.")
+				data += fd.recv(data_len - len(data))
+
 			sig = fd.recv(sig_len)
+			while len(sig) < sig_len:
+				print("[EXCEPTION] Sig recv is not complete, now try to recv more.")
+				sig += fd.recv(sig_len - len(sig))
 		except:
 			print('[ERROR] Failed to receive client data')
 			fd.close()
