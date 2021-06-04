@@ -2,6 +2,7 @@ import socket
 import sys
 import threading
 import time
+from signal import signal, SIGINT
 
 from blockchain import Blockchain
 from message import MessageType
@@ -12,8 +13,8 @@ import gui
 peer = Peer(sys.argv[1])
 
 print("Threading Peer...")
-pa = threading.Thread(target=peer.run, args=())
-pa.start()
+peer_run_thread = threading.Thread(target=peer.run, args=())
+peer_run_thread.start()
 
 # Wait for peer to sync its peer list
 time.sleep(3)
@@ -30,8 +31,18 @@ chain.initial_blockchain_download()
 
 gui.main(betlist)
 
+## Set up the CTRL+C handler
+def sigint_handler(s, t):
+    peer.interrupt_handler()
+    peer_run_thread.join()
+    peer.peerfd.close()
+    chain.stop_mining = True
+    chain.mining_thread.join()
+    # exit(0)
 
-# pa.join()
+signal(SIGINT, sigint_handler)
+
+# peer_run_thread.join()
 # while 1:
 #     line = input('\r..> ')
 #     print("You just put a bet:", line)

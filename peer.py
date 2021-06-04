@@ -59,6 +59,7 @@ class Peer:
 		"""
 
 		## Save all of the values for later
+		self.stop_peering = False
 		self.tracker = tracker
 		self.tracker_port = tracker_port
 		self.sig_port = sig_port
@@ -178,9 +179,6 @@ class Peer:
 		self.peerfd.listen(10)
 
 		print('[INFO] Peer listening on port: %d' %(list_port))
-
-		## Set up the CTRL+C handler
-		signal(SIGINT, self.handler)
 
 		## Create a thread to periodically do a peer list update
 		self.peer_update = threading.Thread(target = self.update_peer_list, args = ())
@@ -360,22 +358,19 @@ class Peer:
 
 		msg_type, = struct.unpack_from("I", data)
 		print("[INFO] Received new Message of type:", msg_type)
-		self.msg_handlers[msg_type](data, client[0])
+		if msg_type in self.msg_handlers:
+			self.msg_handlers[msg_type](data, client[0])
 
 		return;
 
 	def register_msg_handler(self, msg_type, handler):
 		self.msg_handlers[msg_type] = handler
 
-	def handler(self, s, f):
+	def interrupt_handler(self):
 		print('[INFO] Shutting down')
 		self.peer_loop = 0
-
+		self.stop_peering = True
 		self.peer_update.join()
-
-		self.peerfd.close()
-
-		exit(0)
 
 	def update_peer_list(self):
 
@@ -416,6 +411,8 @@ class Peer:
 		inputs = [ self.peerfd ]
 
 		while inputs:
+			if self.stop_peering:
+				break
 			readable, writable, exceptional = select.select(inputs, [], inputs, 5)
 
 			for r in readable:
