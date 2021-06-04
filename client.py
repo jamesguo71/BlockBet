@@ -20,12 +20,14 @@ time.sleep(3)
 
 betlist = BetList(peer)
 chain = Blockchain(peer, betlist)
+
 peer.register_msg_handler(MessageType.IBD_RESPONSE, chain.ibd_response_handler)
-chain.initial_blockchain_download()
 peer.register_msg_handler(MessageType.IBD_REQUEST, chain.push_my_blockchain)
 peer.register_msg_handler(MessageType.NEW_BLOCK, chain.receive_new_block)
-
 peer.register_msg_handler(MessageType.NEW_BET, betlist.receive_bets)
+
+chain.initial_blockchain_download()
+
 gui.main(betlist)
 
 
